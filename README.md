@@ -116,6 +116,29 @@ niet kwijt te raken).
 - `/admin/settings` — bankrekeningen beheren (toevoegen, standaard instellen,
   verwijderen) en het sjabloon voor de betaalmededeling aanpassen
 
+## Voorkomen dat het gratis Supabase-project pauzeert
+
+Een gratis Supabase-project pauzeert automatisch na 7 dagen zonder enige
+activiteit. `scripts/keep-alive.ps1` bezoekt de live site (wat automatisch
+een databasebevraging doet), en `scripts/register-keep-alive-task.ps1` zet
+dit als een dagelijkse Windows-taak.
+
+Eenmalig instellen (op een pc die regelmatig aanstaat, bv. minstens 1x per
+paar dagen):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/register-keep-alive-task.ps1
+```
+
+Dit maakt een taak "ZwemTicketsKeepAlive" aan die elke dag om 09:00 draait
+(ook als de pc op dat moment sliep — hij haalt het dan alsnog in zodra de pc
+weer aanstaat). Een logbestand `scripts/keep-alive.log` houdt bij of het
+gelukt is. Te verwijderen met:
+
+```powershell
+Unregister-ScheduledTask -TaskName "ZwemTicketsKeepAlive" -Confirm:$false
+```
+
 ## Nog niet inbegrepen (mogelijke volgende stappen)
 
 - Automatische terugbetaling/annulering vanuit de admin-pagina
