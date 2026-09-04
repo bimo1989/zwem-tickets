@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { BankAccountRow, EventRow } from "@/lib/supabase";
+import type { BankAccountRow, EventPriceTierRow, EventRow } from "@/lib/supabase";
+
+type EventWithTiers = EventRow & { event_price_tiers: EventPriceTierRow[] };
+
+type TierForm = { label: string; price_euro: string };
 
 type FormState = {
   title: string;
@@ -11,8 +15,7 @@ type FormState = {
   start_time: string;
   end_time: string;
   location: string;
-  price_euro: string;
-  member_price_euro: string;
+  priceTiers: TierForm[];
   capacity: string;
   bank_account_id: string;
   is_published: boolean;
@@ -25,8 +28,7 @@ const emptyForm: FormState = {
   start_time: "18:00",
   end_time: "20:00",
   location: "",
-  price_euro: "",
-  member_price_euro: "",
+  priceTiers: [{ label: "Standaard", price_euro: "" }],
   capacity: "20",
   bank_account_id: "",
   is_published: true,
@@ -35,7 +37,7 @@ const emptyForm: FormState = {
 const DELETE_CONFIRM_PHRASE = "verwijder evenement";
 
 export default function AdminEventsPage() {
-  const [events, setEvents] = useState<EventRow[]>([]);
+  const [events, setEvents] = useState<EventWithTiers[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -69,10 +71,38 @@ export default function AdminEventsPage() {
       });
   }, []);
 
+  function updateTier(index: number, patch: Partial<TierForm>) {
+    setForm((f) => ({
+      ...f,
+      priceTiers: f.priceTiers.map((t, i) => (i === index ? { ...t, ...patch } : t)),
+    }));
+  }
+
+  function addTier() {
+    setForm((f) => ({ ...f, priceTiers: [...f.priceTiers, { label: "", price_euro: "" }] }));
+  }
+
+  function removeTier(index: number) {
+    setForm((f) => ({ ...f, priceTiers: f.priceTiers.filter((_, i) => i !== index) }));
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    const price_tiers = form.priceTiers
+      .filter((t) => t.label.trim() && t.price_euro.trim())
+      .map((t) => ({
+        label: t.label.trim(),
+        price_cents: Math.round(parseFloat(t.price_euro) * 100),
+      }));
+
+    if (price_tiers.length === 0) {
+      setError("Voeg minstens 1 prijscategorie met naam en prijs toe.");
+      setSubmitting(false);
+      return;
+    }
 
     const res = await fetch("/api/admin/events", {
       method: "POST",
@@ -84,10 +114,7 @@ export default function AdminEventsPage() {
         start_time: form.start_time,
         end_time: form.end_time,
         location: form.location,
-        price_cents: Math.round(parseFloat(form.price_euro || "0") * 100),
-        member_price_cents: form.member_price_euro
-          ? Math.round(parseFloat(form.member_price_euro) * 100)
-          : null,
+        price_tiers,
         capacity: parseInt(form.capacity, 10),
         bank_account_id: form.bank_account_id || null,
         is_published: form.is_published,
@@ -151,7 +178,10 @@ export default function AdminEventsPage() {
     loadEvents();
   }
 
-  function handleDuplicate(ev: EventRow) {
+  function handleDuplicate(ev: EventWithTiers) {
+    const sortedTiers = [...ev.event_price_tiers].sort(
+      (a, b) => a.display_order - b.display_order
+    );
     setForm({
       title: `${ev.title} (kopie)`,
       description: ev.description ?? "",
@@ -159,9 +189,9 @@ export default function AdminEventsPage() {
       start_time: ev.start_time.slice(0, 5),
       end_time: ev.end_time.slice(0, 5),
       location: ev.location ?? "",
-      price_euro: (ev.price_cents / 100).toFixed(2),
-      member_price_euro:
-        ev.member_price_cents != null ? (ev.member_price_cents / 100).toFixed(2) : "",
+      priceTiers: sortedTiers.length
+        ? sortedTiers.map((t) => ({ label: t.label, price_euro: (t.price_cents / 100).toFixed(2) }))
+        : [{ label: "Standaard", price_euro: "" }],
       capacity: String(ev.capacity),
       bank_account_id: ev.bank_account_id ?? "",
       is_published: false,
@@ -254,46 +284,62 @@ export default function AdminEventsPage() {
             />
           </Field>
 
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="Prijs niet-leden (€)">
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price_euro}
-                onChange={(e) => setForm({ ...form, price_euro: e.target.value })}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                placeholder="7.00"
-              />
-            </Field>
-            <Field label="Prijs leden (€, optioneel)">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.member_price_euro}
-                onChange={(e) =>
-                  setForm({ ...form, member_price_euro: e.target.value })
-                }
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                placeholder="5.00"
-              />
-            </Field>
-            <Field label="Capaciteit (aantal tickets)">
-              <input
-                required
-                type="number"
-                min="1"
-                value={form.capacity}
-                onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              />
-            </Field>
+          <div>
+            <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Prijscategorieën
+            </span>
+            <p className="mt-1 text-xs text-zinc-400">
+              Voeg zoveel categorieën toe als je nodig hebt (bv. Leden, Niet-leden,
+              Studenten, ...). De koper kiest er bij het bestellen één.
+            </p>
+            <div className="mt-2 flex flex-col gap-2">
+              {form.priceTiers.map((tier, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    value={tier.label}
+                    onChange={(e) => updateTier(index, { label: e.target.value })}
+                    placeholder="Naam (bv. Leden)"
+                    className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={tier.price_euro}
+                    onChange={(e) => updateTier(index, { price_euro: e.target.value })}
+                    placeholder="€"
+                    className="w-28 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeTier(index)}
+                    disabled={form.priceTiers.length <= 1}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addTier}
+              className="mt-2 rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              + Categorie toevoegen
+            </button>
           </div>
-          <p className="-mt-2 text-xs text-zinc-400">
-            Laat &quot;Prijs leden&quot; leeg als er geen ledenkorting is voor dit evenement.
-          </p>
+
+          <Field label="Capaciteit (aantal tickets)">
+            <input
+              required
+              type="number"
+              min="1"
+              value={form.capacity}
+              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+              className="w-40 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            />
+          </Field>
 
           <Field label="Rekening voor overschrijvingen">
             <select
@@ -355,9 +401,10 @@ export default function AdminEventsPage() {
                 <p className="font-medium text-zinc-900 dark:text-zinc-50">{ev.title}</p>
                 <p className="text-sm text-zinc-500">
                   {ev.event_date} · {ev.start_time.slice(0, 5)}–{ev.end_time.slice(0, 5)} ·{" "}
-                  {ev.member_price_cents != null
-                    ? `€${(ev.member_price_cents / 100).toFixed(2)} (leden) / €${(ev.price_cents / 100).toFixed(2)} (niet-leden)`
-                    : `€${(ev.price_cents / 100).toFixed(2)}`}{" "}
+                  {[...ev.event_price_tiers]
+                    .sort((a, b) => a.display_order - b.display_order)
+                    .map((t) => `${t.label} €${(t.price_cents / 100).toFixed(2)}`)
+                    .join(" · ")}{" "}
                   · capaciteit {ev.capacity}
                 </p>
               </div>

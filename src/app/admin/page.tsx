@@ -72,22 +72,29 @@ export default function AdminPage() {
     if (!order.buyer_phone) return null;
     const event = events.find((e) => e.id === order.event_id);
     const shortCode = order.ticket_code.slice(0, 8).toUpperCase();
-    const message =
-      order.status === "paid"
-        ? `Hallo ${order.buyer_name}, dit is een bericht van ${event?.title ?? "ons"}.`
-        : `Hallo ${order.buyer_name}, we zien nog geen betaling binnenkomen voor je ticket voor "${event?.title ?? "het evenement"}" (referentie ${shortCode}). Kan je dit even nakijken? Bedankt!`;
+    const ticketUrl = `${window.location.origin}/ticket/${order.id}`;
+
+    let message: string;
+    if (order.status === "paid") {
+      message = `Hallo ${order.buyer_name}, dit is een bericht van ${event?.title ?? "ons"}.`;
+    } else if (order.payment_method === "bank_transfer") {
+      message = `Hallo ${order.buyer_name}, we zien nog geen betaling binnenkomen voor je ticket voor "${event?.title ?? "het evenement"}" (referentie ${shortCode}). Via deze link vind je de betaalgegevens (IBAN + QR-code) nog eens terug: ${ticketUrl} — kan je dit even in orde brengen? Bedankt!`;
+    } else {
+      message = `Hallo ${order.buyer_name}, we zien nog geen betaling binnenkomen voor je ticket voor "${event?.title ?? "het evenement"}" (referentie ${shortCode}). Kan je dit even nakijken? Bedankt!`;
+    }
+
     return buildWhatsAppLink(order.buyer_phone, message);
   }
 
   function exportCsv() {
     const rows = [
-      ["Naam", "E-mail", "Telefoon", "Aantal", "Lid", "Bedrag (EUR)", "Status", "Besteld op", "Ticketcode"],
+      ["Naam", "E-mail", "Telefoon", "Aantal", "Categorie", "Bedrag (EUR)", "Status", "Besteld op", "Ticketcode"],
       ...filteredOrders.map((o) => [
         o.buyer_name,
         o.buyer_email,
         o.buyer_phone ?? "",
         String(o.quantity),
-        o.is_member ? "Ja" : "Nee",
+        o.price_tier_label,
         (o.amount_cents / 100).toFixed(2),
         STATUS_LABELS[o.status],
         new Date(o.created_at).toLocaleString("nl-BE"),
@@ -153,7 +160,7 @@ export default function AdminPage() {
                 <th className="px-4 py-2">Naam</th>
                 <th className="px-4 py-2">E-mail</th>
                 <th className="px-4 py-2">Aantal</th>
-                <th className="px-4 py-2">Lid</th>
+                <th className="px-4 py-2">Categorie</th>
                 <th className="px-4 py-2">Bedrag</th>
                 <th className="px-4 py-2">Methode</th>
                 <th className="px-4 py-2">Status</th>
@@ -168,7 +175,7 @@ export default function AdminPage() {
                   <td className="px-4 py-2">{o.buyer_name}</td>
                   <td className="px-4 py-2">{o.buyer_email}</td>
                   <td className="px-4 py-2">{o.quantity}</td>
-                  <td className="px-4 py-2">{o.is_member ? "Ja" : "Nee"}</td>
+                  <td className="px-4 py-2">{o.price_tier_label}</td>
                   <td className="px-4 py-2">€{(o.amount_cents / 100).toFixed(2)}</td>
                   <td className="px-4 py-2 text-zinc-500">
                     {o.payment_method === "bank_transfer" ? "Overschrijving" : "Mollie"}

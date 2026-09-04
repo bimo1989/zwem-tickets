@@ -10,7 +10,7 @@ async function getUpcomingEventsWithAvailability() {
 
   const { data: events, error } = await supabase
     .from("events")
-    .select("*")
+    .select("*, event_price_tiers(id)")
     .eq("is_published", true)
     .gte("event_date", today)
     .order("event_date", { ascending: true });
@@ -25,9 +25,10 @@ async function getUpcomingEventsWithAvailability() {
     (sales ?? []).map((s) => [s.event_id, s.tickets_paid as number])
   );
 
-  return (events as EventRow[]).map((event) => ({
+  return (events as (EventRow & { event_price_tiers: { id: string }[] })[]).map((event) => ({
     event,
     ticketsSold: soldMap.get(event.id) ?? 0,
+    tierCount: event.event_price_tiers.length,
   }));
 }
 
@@ -51,7 +52,7 @@ export default async function Home() {
             </p>
           )}
 
-          {upcoming.map(({ event, ticketsSold }) => {
+          {upcoming.map(({ event, ticketsSold, tierCount }) => {
             const remaining = event.capacity - ticketsSold;
             const soldOut = remaining <= 0;
 
@@ -81,9 +82,7 @@ export default async function Home() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      {event.member_price_cents != null
-                        ? `€${formatEuroCents(event.member_price_cents)} – €${formatEuroCents(event.price_cents)}`
-                        : `€${formatEuroCents(event.price_cents)}`}
+                      {tierCount > 1 ? "vanaf " : ""}€{formatEuroCents(event.price_cents)}
                     </p>
                     <p
                       className={`mt-1 text-xs font-medium ${

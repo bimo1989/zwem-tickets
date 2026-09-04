@@ -7,11 +7,11 @@ import { getBankAccountForEvent } from "@/lib/sepaQr";
 
 const checkoutSchema = z.object({
   eventId: z.string().uuid(),
+  priceTierId: z.string().uuid(),
   buyerName: z.string().trim().min(1).max(200),
   buyerEmail: z.string().trim().email().max(320),
   buyerPhone: z.string().trim().min(6).max(30),
   quantity: z.coerce.number().int().min(1).max(10),
-  isMember: z.boolean().optional().default(false),
   paymentMethod: z.enum(["mollie", "bank_transfer"]).optional().default("mollie"),
 });
 
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
-  const { eventId, buyerName, buyerEmail, buyerPhone, quantity, isMember, paymentMethod } =
+  const { eventId, priceTierId, buyerName, buyerEmail, buyerPhone, quantity, paymentMethod } =
     parsed.data;
 
   const supabase = getSupabaseAdmin();
@@ -63,13 +63,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Only honor the member checkbox if this event actually has a member
-  // price configured; otherwise always charge the regular price.
-  const useMemberPrice = isMember && event.member_price_cents != null;
-  const unitPriceCents = useMemberPrice
-    ? event.member_price_cents!
-    : event.price_cents;
-  const amountCents = unitPriceCents * quantity;
+  // Never trust a client-submitted price — look up the chosen tier
+  // server-side and confirm it actually belongs to this event.
+  const { data: priceTier } = await supabase
+    .from("event_price_tiers")
+    .select("*")
+    .eq("id", priceTierId)
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (!priceTier) {
+    return NextResponse.json({ error: "Ongeldige prijscategorie." }, { status: 400 });
+  }
+
+  const amountCents = priceTier.price_cents * quantity;
   const ticketCode = randomBytes(8).toString("hex");
 
   const { data: order, error: orderError } = await supabase
@@ -80,7 +87,7 @@ export async function POST(req: NextRequest) {
       buyer_email: buyerEmail,
       buyer_phone: buyerPhone,
       quantity,
-      is_member: useMemberPrice,
+      price_tier_label: priceTier.label,
       amount_cents: amountCents,
       status: "open",
       payment_method: paymentMethod,

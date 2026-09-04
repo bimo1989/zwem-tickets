@@ -20,11 +20,21 @@ create table if not exists events (
   start_time time not null,
   end_time time not null,
   location text,
-  price_cents integer not null,          -- price per ticket for non-members, in eurocents
-  member_price_cents integer,            -- discounted price per ticket for members (null = no member discount)
+  price_cents integer not null,          -- lowest price tier, kept in sync automatically; used for homepage display/sorting
   capacity integer not null,             -- max number of tickets
   bank_account_id uuid references bank_accounts(id), -- where a bank-transfer payment should land; null = bank transfer unavailable for this event
   is_published boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Free-form list of price categories per event (e.g. "Leden", "Niet-leden",
+-- "Studenten" — as many as needed). The buyer picks exactly one at checkout.
+create table if not exists event_price_tiers (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references events(id) on delete cascade,
+  label text not null,
+  price_cents integer not null,
+  display_order integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -36,8 +46,8 @@ create table if not exists orders (
   buyer_email text not null,
   buyer_phone text,                       -- used for the "WhatsApp sturen" admin action
   quantity integer not null check (quantity > 0),
-  is_member boolean not null default false, -- ticked "ik ben lid" at checkout -> member price was used
-  amount_cents integer not null,          -- quantity * price actually charged (member or non-member)
+  price_tier_label text not null default 'Standaard', -- snapshot of the chosen price category's name
+  amount_cents integer not null,          -- quantity * the chosen tier's price at checkout time
   status text not null default 'open',    -- open | paid | expired | canceled | failed
   payment_method text not null default 'mollie', -- mollie | bank_transfer
   mollie_payment_id text,
@@ -50,6 +60,7 @@ create table if not exists orders (
 create index if not exists orders_event_id_idx on orders(event_id);
 create index if not exists orders_status_idx on orders(status);
 create index if not exists orders_mollie_payment_id_idx on orders(mollie_payment_id);
+create index if not exists event_price_tiers_event_id_idx on event_price_tiers(event_id);
 
 -- Singleton settings row (the boolean-primary-key trick guarantees there's
 -- ever only one row).
@@ -79,5 +90,6 @@ group by e.id, e.title, e.capacity;
 -- so the public/anon key can't read or write anything.
 alter table bank_accounts enable row level security;
 alter table events enable row level security;
+alter table event_price_tiers enable row level security;
 alter table orders enable row level security;
 alter table app_settings enable row level security;

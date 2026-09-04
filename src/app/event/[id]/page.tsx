@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getSupabaseAdmin, type EventRow } from "@/lib/supabase";
+import { getSupabaseAdmin, type EventRow, type EventPriceTierRow } from "@/lib/supabase";
 import { formatEuroCents } from "@/lib/mollie";
 import BuyForm from "./buy-form";
 
@@ -18,13 +18,20 @@ async function getEventWithAvailability(id: string) {
   if (error) throw error;
   if (!event) return null;
 
-  const { data: sale } = await supabase
-    .from("event_sales")
-    .select("tickets_paid")
-    .eq("event_id", id)
-    .maybeSingle();
+  const [{ data: sale }, { data: priceTiers }] = await Promise.all([
+    supabase.from("event_sales").select("tickets_paid").eq("event_id", id).maybeSingle(),
+    supabase
+      .from("event_price_tiers")
+      .select("*")
+      .eq("event_id", id)
+      .order("display_order", { ascending: true }),
+  ]);
 
-  return { event: event as EventRow, ticketsSold: sale?.tickets_paid ?? 0 };
+  return {
+    event: event as EventRow,
+    ticketsSold: sale?.tickets_paid ?? 0,
+    priceTiers: (priceTiers ?? []) as EventPriceTierRow[],
+  };
 }
 
 export default async function EventPage({
@@ -37,7 +44,7 @@ export default async function EventPage({
 
   if (!result) notFound();
 
-  const { event, ticketsSold } = result;
+  const { event, ticketsSold, priceTiers } = result;
   const remaining = Math.max(event.capacity - ticketsSold, 0);
 
   return (
@@ -60,20 +67,24 @@ export default async function EventPage({
         )}
 
         <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-zinc-600 dark:text-zinc-400">Prijs per ticket</span>
-            <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              {event.member_price_cents != null ? (
-                <>
-                  €{formatEuroCents(event.member_price_cents)}{" "}
-                  <span className="text-sm font-normal text-zinc-500">(leden)</span>{" "}
-                  / €{formatEuroCents(event.price_cents)}{" "}
-                  <span className="text-sm font-normal text-zinc-500">
-                    (niet-leden)
-                  </span>
-                </>
+          <div className="flex items-start justify-between">
+            <span className="text-zinc-600 dark:text-zinc-400">
+              {priceTiers.length > 1 ? "Prijzen" : "Prijs per ticket"}
+            </span>
+            <span className="text-right text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              {priceTiers.length > 1 ? (
+                <span className="flex flex-col gap-0.5">
+                  {priceTiers.map((tier) => (
+                    <span key={tier.id}>
+                      €{formatEuroCents(tier.price_cents)}{" "}
+                      <span className="text-sm font-normal text-zinc-500">
+                        ({tier.label})
+                      </span>
+                    </span>
+                  ))}
+                </span>
               ) : (
-                <>€{formatEuroCents(event.price_cents)}</>
+                <>€{formatEuroCents(priceTiers[0]?.price_cents ?? event.price_cents)}</>
               )}
             </span>
           </div>
@@ -85,8 +96,11 @@ export default async function EventPage({
           {remaining > 0 ? (
             <BuyForm
               eventId={event.id}
-              pricePerTicketCents={event.price_cents}
-              memberPricePerTicketCents={event.member_price_cents}
+              priceTiers={priceTiers.map((t) => ({
+                id: t.id,
+                label: t.label,
+                priceCents: t.price_cents,
+              }))}
               maxQuantity={Math.min(remaining, 10)}
               bankTransferAvailable={event.bank_account_id != null}
               mollieAvailable={!!process.env.MOLLIE_API_KEY}

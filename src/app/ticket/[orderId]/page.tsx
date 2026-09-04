@@ -48,8 +48,7 @@ export default async function TicketPage({
           {event.title}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          {order.buyer_name} · {order.quantity} ticket(s)
-          {order.is_member ? " · ledentarief" : ""}
+          {order.buyer_name} · {order.quantity} ticket(s) · {order.price_tier_label}
         </p>
 
         {order.status === "paid" ? (

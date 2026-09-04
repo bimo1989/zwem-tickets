@@ -3,18 +3,17 @@
 import { useState } from "react";
 
 type PaymentMethod = "mollie" | "bank_transfer";
+type PriceTier = { id: string; label: string; priceCents: number };
 
 export default function BuyForm({
   eventId,
-  pricePerTicketCents,
-  memberPricePerTicketCents,
+  priceTiers,
   maxQuantity,
   bankTransferAvailable,
   mollieAvailable,
 }: {
   eventId: string;
-  pricePerTicketCents: number;
-  memberPricePerTicketCents: number | null;
+  priceTiers: PriceTier[];
   maxQuantity: number;
   bankTransferAvailable: boolean;
   mollieAvailable: boolean;
@@ -23,19 +22,15 @@ export default function BuyForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [isMember, setIsMember] = useState(false);
+  const [priceTierId, setPriceTierId] = useState(priceTiers[0]?.id ?? "");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     mollieAvailable ? "mollie" : "bank_transfer"
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasMemberPrice = memberPricePerTicketCents != null;
-  const unitPriceCents =
-    isMember && memberPricePerTicketCents != null
-      ? memberPricePerTicketCents
-      : pricePerTicketCents;
-  const total = ((unitPriceCents * quantity) / 100).toFixed(2);
+  const selectedTier = priceTiers.find((t) => t.id === priceTierId) ?? priceTiers[0];
+  const total = (((selectedTier?.priceCents ?? 0) * quantity) / 100).toFixed(2);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,11 +43,11 @@ export default function BuyForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId,
+          priceTierId,
           buyerName: name,
           buyerEmail: email,
           buyerPhone: phone,
           quantity,
-          isMember,
           paymentMethod,
         }),
       });
@@ -145,16 +140,31 @@ export default function BuyForm({
         </select>
       </div>
 
-      {hasMemberPrice && (
-        <label className="flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          <input
-            type="checkbox"
-            checked={isMember}
-            onChange={(e) => setIsMember(e.target.checked)}
-          />
-          Ik ben lid (€{(memberPricePerTicketCents! / 100).toFixed(2)} i.p.v. €
-          {(pricePerTicketCents / 100).toFixed(2)} per ticket)
-        </label>
+      {priceTiers.length > 1 && (
+        <div>
+          <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Prijscategorie
+          </span>
+          <div className="mt-1 flex flex-col gap-2">
+            {priceTiers.map((tier) => (
+              <label
+                key={tier.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="priceTier"
+                    checked={priceTierId === tier.id}
+                    onChange={() => setPriceTierId(tier.id)}
+                  />
+                  {tier.label}
+                </span>
+                <span className="text-zinc-500">€{(tier.priceCents / 100).toFixed(2)}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       )}
 
       {mollieAvailable && bankTransferAvailable && (

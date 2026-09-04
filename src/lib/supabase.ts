@@ -27,7 +27,6 @@ export type EventRow = {
   end_time: string;
   location: string | null;
   price_cents: number;
-  member_price_cents: number | null;
   capacity: number;
   bank_account_id: string | null;
   is_published: boolean;
@@ -42,7 +41,7 @@ export type OrderRow = {
   buyer_email: string;
   buyer_phone: string | null;
   quantity: number;
-  is_member: boolean;
+  price_tier_label: string;
   amount_cents: number;
   status: "open" | "paid" | "expired" | "canceled" | "failed";
   payment_method: "mollie" | "bank_transfer";
@@ -51,6 +50,15 @@ export type OrderRow = {
   ticket_code: string;
   created_at: string;
   paid_at: string | null;
+};
+
+export type EventPriceTierRow = {
+  id: string;
+  event_id: string;
+  label: string;
+  price_cents: number;
+  display_order: number;
+  created_at: string;
 };
 
 export type BankAccountRow = {
