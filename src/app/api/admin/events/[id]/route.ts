@@ -48,23 +48,10 @@ export async function DELETE(
   const { id } = await params;
   const supabase = getSupabaseAdmin();
 
-  // Refuse to delete an event that already has orders against it — cancel
-  // (unpublish) it instead so past tickets/history stay intact.
-  const { count } = await supabase
-    .from("orders")
-    .select("id", { count: "exact", head: true })
-    .eq("event_id", id);
-
-  if (count && count > 0) {
-    return NextResponse.json(
-      {
-        error:
-          "Dit evenement heeft al bestellingen en kan niet verwijderd worden. Zet het op 'niet gepubliceerd' in plaats daarvan.",
-      },
-      { status: 409 }
-    );
-  }
-
+  // Deleting an event cascades to its orders (see supabase/schema.sql —
+  // orders.event_id references events(id) on delete cascade). The admin UI
+  // requires typing a confirmation phrase before calling this, since it's
+  // permanent and takes ticket/sales history with it.
   const { error } = await supabase.from("events").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

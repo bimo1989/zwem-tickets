@@ -32,6 +32,8 @@ const emptyForm: FormState = {
   is_published: true,
 };
 
+const DELETE_CONFIRM_PHRASE = "verwijder evenement";
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccountRow[]>([]);
@@ -40,6 +42,9 @@ export default function AdminEventsPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function loadEvents() {
     fetch("/api/admin/events")
@@ -120,14 +125,50 @@ export default function AdminEventsPage() {
     loadEvents();
   }
 
-  async function handleDelete(ev: EventRow) {
+  function startDelete(ev: EventRow) {
+    setDeletingId(ev.id);
+    setDeleteConfirmText("");
+    setDeleteError(null);
+  }
+
+  function cancelDelete() {
+    setDeletingId(null);
+    setDeleteConfirmText("");
+    setDeleteError(null);
+  }
+
+  async function confirmDelete(ev: EventRow) {
+    if (deleteConfirmText.trim().toLowerCase() !== DELETE_CONFIRM_PHRASE) return;
+
     const res = await fetch(`/api/admin/events/${ev.id}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error ?? "Kon evenement niet verwijderen.");
+      setDeleteError(data.error ?? "Kon evenement niet verwijderen.");
       return;
     }
+    setDeletingId(null);
+    setDeleteConfirmText("");
     loadEvents();
+  }
+
+  function handleDuplicate(ev: EventRow) {
+    setForm({
+      title: `${ev.title} (kopie)`,
+      description: ev.description ?? "",
+      event_date: "",
+      start_time: ev.start_time.slice(0, 5),
+      end_time: ev.end_time.slice(0, 5),
+      location: ev.location ?? "",
+      price_euro: (ev.price_cents / 100).toFixed(2),
+      member_price_euro:
+        ev.member_price_cents != null ? (ev.member_price_cents / 100).toFixed(2) : "",
+      capacity: String(ev.capacity),
+      bank_account_id: ev.bank_account_id ?? "",
+      is_published: false,
+    });
+    setShowForm(true);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -137,7 +178,13 @@ export default function AdminEventsPage() {
           Evenementen
         </h1>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => {
+            if (!showForm) {
+              const defaultAccount = bankAccounts.find((a) => a.is_default);
+              setForm({ ...emptyForm, bank_account_id: defaultAccount?.id ?? "" });
+            }
+            setShowForm((v) => !v);
+          }}
           className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
           {showForm ? "Annuleren" : "+ Nieuw evenement"}
@@ -301,55 +348,103 @@ export default function AdminEventsPage() {
         {events.map((ev) => (
           <div
             key={ev.id}
-            className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+            className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
           >
-            <div>
-              <p className="font-medium text-zinc-900 dark:text-zinc-50">{ev.title}</p>
-              <p className="text-sm text-zinc-500">
-                {ev.event_date} · {ev.start_time.slice(0, 5)}–{ev.end_time.slice(0, 5)} ·{" "}
-                {ev.member_price_cents != null
-                  ? `€${(ev.member_price_cents / 100).toFixed(2)} (leden) / €${(ev.price_cents / 100).toFixed(2)} (niet-leden)`
-                  : `€${(ev.price_cents / 100).toFixed(2)}`}{" "}
-                · capaciteit {ev.capacity}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-zinc-900 dark:text-zinc-50">{ev.title}</p>
+                <p className="text-sm text-zinc-500">
+                  {ev.event_date} · {ev.start_time.slice(0, 5)}–{ev.end_time.slice(0, 5)} ·{" "}
+                  {ev.member_price_cents != null
+                    ? `€${(ev.member_price_cents / 100).toFixed(2)} (leden) / €${(ev.price_cents / 100).toFixed(2)} (niet-leden)`
+                    : `€${(ev.price_cents / 100).toFixed(2)}`}{" "}
+                  · capaciteit {ev.capacity}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={ev.bank_account_id ?? ""}
+                  onChange={(e) => handleChangeBankAccount(ev, e.target.value)}
+                  title="Rekening voor overschrijvingen"
+                  className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  <option value="">Geen rekening</option>
+                  {bankAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.label}
+                    </option>
+                  ))}
+                </select>
+                <Link
+                  href={`/admin?event=${ev.id}`}
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                >
+                  Tickets
+                </Link>
+                <button
+                  onClick={() => handleDuplicate(ev)}
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                >
+                  Dupliceer
+                </button>
+                <button
+                  onClick={() => togglePublished(ev)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                    ev.is_published
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  }`}
+                >
+                  {ev.is_published ? "Gepubliceerd" : "Verborgen"}
+                </button>
+                <button
+                  onClick={() => startDelete(ev)}
+                  className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                >
+                  Verwijder
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={ev.bank_account_id ?? ""}
-                onChange={(e) => handleChangeBankAccount(ev, e.target.value)}
-                title="Rekening voor overschrijvingen"
-                className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              >
-                <option value="">Geen rekening</option>
-                {bankAccounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.label}
-                  </option>
-                ))}
-              </select>
-              <Link
-                href={`/admin?event=${ev.id}`}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-              >
-                Tickets
-              </Link>
-              <button
-                onClick={() => togglePublished(ev)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                  ev.is_published
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
-                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                }`}
-              >
-                {ev.is_published ? "Gepubliceerd" : "Verborgen"}
-              </button>
-              <button
-                onClick={() => handleDelete(ev)}
-                className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-              >
-                Verwijder
-              </button>
-            </div>
+
+            {deletingId === ev.id && (
+              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  Dit verwijdert <strong>{ev.title}</strong> permanent, inclusief alle
+                  bestellingen en verkoopgeschiedenis. Typ{" "}
+                  <code className="rounded bg-red-100 px-1 dark:bg-red-900">
+                    {DELETE_CONFIRM_PHRASE}
+                  </code>{" "}
+                  om te bevestigen.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    autoFocus
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={DELETE_CONFIRM_PHRASE}
+                    className="rounded-md border border-red-300 px-3 py-1.5 text-sm dark:border-red-800 dark:bg-zinc-900 dark:text-zinc-100"
+                  />
+                  <button
+                    onClick={() => confirmDelete(ev)}
+                    disabled={
+                      deleteConfirmText.trim().toLowerCase() !== DELETE_CONFIRM_PHRASE
+                    }
+                    className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                  >
+                    Definitief verwijderen
+                  </button>
+                  <button
+                    onClick={cancelDelete}
+                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  >
+                    Annuleer
+                  </button>
+                </div>
+                {deleteError && (
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{deleteError}</p>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
