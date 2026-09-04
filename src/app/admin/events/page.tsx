@@ -1,0 +1,369 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { BankAccountRow, EventRow } from "@/lib/supabase";
+
+type FormState = {
+  title: string;
+  description: string;
+  event_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  price_euro: string;
+  member_price_euro: string;
+  capacity: string;
+  bank_account_id: string;
+  is_published: boolean;
+};
+
+const emptyForm: FormState = {
+  title: "",
+  description: "",
+  event_date: "",
+  start_time: "18:00",
+  end_time: "20:00",
+  location: "",
+  price_euro: "",
+  member_price_euro: "",
+  capacity: "20",
+  bank_account_id: "",
+  is_published: true,
+};
+
+export default function AdminEventsPage() {
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function loadEvents() {
+    fetch("/api/admin/events")
+      .then((res) => res.json())
+      .then((data) => {
+        setEvents(data.events ?? []);
+        setLoading(false);
+      });
+  }
+
+  useEffect(() => {
+    loadEvents();
+    fetch("/api/admin/bank-accounts")
+      .then((res) => res.json())
+      .then((data) => {
+        const accounts: BankAccountRow[] = data.bankAccounts ?? [];
+        setBankAccounts(accounts);
+        const defaultAccount = accounts.find((a) => a.is_default);
+        if (defaultAccount) {
+          setForm((f) => ({ ...f, bank_account_id: defaultAccount.id }));
+        }
+      });
+  }, []);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    const res = await fetch("/api/admin/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: form.title,
+        description: form.description,
+        event_date: form.event_date,
+        start_time: form.start_time,
+        end_time: form.end_time,
+        location: form.location,
+        price_cents: Math.round(parseFloat(form.price_euro || "0") * 100),
+        member_price_cents: form.member_price_euro
+          ? Math.round(parseFloat(form.member_price_euro) * 100)
+          : null,
+        capacity: parseInt(form.capacity, 10),
+        bank_account_id: form.bank_account_id || null,
+        is_published: form.is_published,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Kon evenement niet aanmaken.");
+      setSubmitting(false);
+      return;
+    }
+
+    setForm(emptyForm);
+    setShowForm(false);
+    setSubmitting(false);
+    loadEvents();
+  }
+
+  async function handleChangeBankAccount(ev: EventRow, bankAccountId: string) {
+    await fetch(`/api/admin/events/${ev.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bank_account_id: bankAccountId || null }),
+    });
+    loadEvents();
+  }
+
+  async function togglePublished(ev: EventRow) {
+    await fetch(`/api/admin/events/${ev.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_published: !ev.is_published }),
+    });
+    loadEvents();
+  }
+
+  async function handleDelete(ev: EventRow) {
+    const res = await fetch(`/api/admin/events/${ev.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error ?? "Kon evenement niet verwijderen.");
+      return;
+    }
+    loadEvents();
+  }
+
+  return (
+    <main className="mx-auto max-w-4xl px-6 py-12">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+          Evenementen
+        </h1>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          {showForm ? "Annuleren" : "+ Nieuw evenement"}
+        </button>
+      </div>
+
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="mt-6 flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <Field label="Titel">
+            <input
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Privé zwemmen voor mannen"
+            />
+          </Field>
+
+          <Field label="Beschrijving (optioneel)">
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              rows={3}
+            />
+          </Field>
+
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Datum">
+              <input
+                required
+                type="date"
+                value={form.event_date}
+                onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+            </Field>
+            <Field label="Van">
+              <input
+                required
+                type="time"
+                value={form.start_time}
+                onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+            </Field>
+            <Field label="Tot">
+              <input
+                required
+                type="time"
+                value={form.end_time}
+                onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+            </Field>
+          </div>
+
+          <Field label="Locatie">
+            <input
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              placeholder="Weldoenerslaan 5, B-3630 Maasmechelen"
+            />
+          </Field>
+
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Prijs niet-leden (€)">
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price_euro}
+                onChange={(e) => setForm({ ...form, price_euro: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="7.00"
+              />
+            </Field>
+            <Field label="Prijs leden (€, optioneel)">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.member_price_euro}
+                onChange={(e) =>
+                  setForm({ ...form, member_price_euro: e.target.value })
+                }
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="5.00"
+              />
+            </Field>
+            <Field label="Capaciteit (aantal tickets)">
+              <input
+                required
+                type="number"
+                min="1"
+                value={form.capacity}
+                onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+            </Field>
+          </div>
+          <p className="-mt-2 text-xs text-zinc-400">
+            Laat &quot;Prijs leden&quot; leeg als er geen ledenkorting is voor dit evenement.
+          </p>
+
+          <Field label="Rekening voor overschrijvingen">
+            <select
+              value={form.bank_account_id}
+              onChange={(e) => setForm({ ...form, bank_account_id: e.target.value })}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            >
+              <option value="">Geen (enkel Mollie)</option>
+              {bankAccounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.label}
+                </option>
+              ))}
+            </select>
+            {bankAccounts.length === 0 && (
+              <p className="mt-1 text-xs text-zinc-400">
+                Nog geen rekeningen — voeg er een toe onder{" "}
+                <Link href="/admin/settings" className="underline">
+                  Instellingen
+                </Link>
+                .
+              </p>
+            )}
+          </Field>
+
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={form.is_published}
+              onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+            />
+            Meteen publiceren (zichtbaar op de site)
+          </label>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="h-11 rounded-full bg-zinc-900 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            {submitting ? "Bezig..." : "Evenement aanmaken"}
+          </button>
+        </form>
+      )}
+
+      <div className="mt-8 flex flex-col gap-3">
+        {loading && <p className="text-zinc-500">Laden...</p>}
+        {!loading && events.length === 0 && (
+          <p className="text-zinc-500">Nog geen evenementen aangemaakt.</p>
+        )}
+        {events.map((ev) => (
+          <div
+            key={ev.id}
+            className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <div>
+              <p className="font-medium text-zinc-900 dark:text-zinc-50">{ev.title}</p>
+              <p className="text-sm text-zinc-500">
+                {ev.event_date} · {ev.start_time.slice(0, 5)}–{ev.end_time.slice(0, 5)} ·{" "}
+                {ev.member_price_cents != null
+                  ? `€${(ev.member_price_cents / 100).toFixed(2)} (leden) / €${(ev.price_cents / 100).toFixed(2)} (niet-leden)`
+                  : `€${(ev.price_cents / 100).toFixed(2)}`}{" "}
+                · capaciteit {ev.capacity}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={ev.bank_account_id ?? ""}
+                onChange={(e) => handleChangeBankAccount(ev, e.target.value)}
+                title="Rekening voor overschrijvingen"
+                className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <option value="">Geen rekening</option>
+                {bankAccounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.label}
+                  </option>
+                ))}
+              </select>
+              <Link
+                href={`/admin?event=${ev.id}`}
+                className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                Tickets
+              </Link>
+              <button
+                onClick={() => togglePublished(ev)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                  ev.is_published
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {ev.is_published ? "Gepubliceerd" : "Verborgen"}
+              </button>
+              <button
+                onClick={() => handleDelete(ev)}
+                className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+              >
+                Verwijder
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
