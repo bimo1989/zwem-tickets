@@ -4,7 +4,7 @@
 # 7 days of total inactivity. Run daily via Windows Task Scheduler —
 # see scripts/register-keep-alive-task.ps1.
 
-$siteUrl = "https://zwem-tickets-ly88.vercel.app/"
+$siteUrl = "https://tickets.mcattawassul.be/"
 $logPath = Join-Path $PSScriptRoot "keep-alive.log"
 
 try {
