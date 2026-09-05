@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Evenement niet gevonden." }, { status: 404 });
   }
 
+  if (event.registration_deadline && new Date(event.registration_deadline) < new Date()) {
+    return NextResponse.json(
+      { error: "De inschrijving voor dit evenement is gesloten." },
+      { status: 409 }
+    );
+  }
+
   // Re-check remaining capacity server-side to prevent overselling.
   const { data: sale } = await supabase
     .from("event_sales")

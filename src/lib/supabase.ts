@@ -28,6 +28,7 @@ export type EventRow = {
   location: string | null;
   price_cents: number;
   capacity: number;
+  registration_deadline: string | null;
   bank_account_id: string | null;
   is_published: boolean;
   created_at: string;

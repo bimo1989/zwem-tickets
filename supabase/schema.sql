@@ -22,6 +22,7 @@ create table if not exists events (
   location text,
   price_cents integer not null,          -- lowest price tier, kept in sync automatically; used for homepage display/sorting
   capacity integer not null,             -- max number of tickets
+  registration_deadline timestamptz,     -- optional; after this moment, no new orders even if not sold out
   bank_account_id uuid references bank_accounts(id), -- where a bank-transfer payment should land; null = bank transfer unavailable for this event
   is_published boolean not null default true,
   created_at timestamptz not null default now()

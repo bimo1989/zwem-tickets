@@ -16,6 +16,7 @@ const updateSchema = z.object({
   location: z.string().trim().max(300).nullable().optional(),
   price_tiers: z.array(priceTierSchema).min(1).optional(),
   capacity: z.coerce.number().int().min(1).optional(),
+  registration_deadline: z.string().trim().nullable().optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   is_published: z.boolean().optional(),
 });
@@ -35,6 +36,10 @@ export async function PATCH(
 
   const supabase = getSupabaseAdmin();
   const { price_tiers, ...eventFields } = parsed.data;
+
+  if ("registration_deadline" in eventFields) {
+    eventFields.registration_deadline = eventFields.registration_deadline || null;
+  }
 
   if (price_tiers) {
     // Replace the full tier list rather than diffing — simplest to reason

@@ -17,6 +17,7 @@ type FormState = {
   location: string;
   priceTiers: TierForm[];
   capacity: string;
+  registration_deadline: string;
   bank_account_id: string;
   is_published: boolean;
 };
@@ -30,9 +31,18 @@ const emptyForm: FormState = {
   location: "",
   priceTiers: [{ label: "Standaard", price_euro: "" }],
   capacity: "20",
+  registration_deadline: "",
   bank_account_id: "",
   is_published: true,
 };
+
+// Formats an ISO timestamp as a value the <input type="datetime-local">
+// element accepts (local time, no seconds/timezone).
+function toDatetimeLocalValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 const DELETE_CONFIRM_PHRASE = "verwijder evenement";
 
@@ -116,6 +126,9 @@ export default function AdminEventsPage() {
         location: form.location,
         price_tiers,
         capacity: parseInt(form.capacity, 10),
+        registration_deadline: form.registration_deadline
+          ? new Date(form.registration_deadline).toISOString()
+          : null,
         bank_account_id: form.bank_account_id || null,
         is_published: form.is_published,
       }),
@@ -139,6 +152,17 @@ export default function AdminEventsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bank_account_id: bankAccountId || null }),
+    });
+    loadEvents();
+  }
+
+  async function handleChangeDeadline(ev: EventRow, localValue: string) {
+    await fetch(`/api/admin/events/${ev.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        registration_deadline: localValue ? new Date(localValue).toISOString() : null,
+      }),
     });
     loadEvents();
   }
@@ -193,6 +217,7 @@ export default function AdminEventsPage() {
         ? sortedTiers.map((t) => ({ label: t.label, price_euro: (t.price_cents / 100).toFixed(2) }))
         : [{ label: "Standaard", price_euro: "" }],
       capacity: String(ev.capacity),
+      registration_deadline: "",
       bank_account_id: ev.bank_account_id ?? "",
       is_published: false,
     });
@@ -330,16 +355,30 @@ export default function AdminEventsPage() {
             </button>
           </div>
 
-          <Field label="Capaciteit (aantal tickets)">
-            <input
-              required
-              type="number"
-              min="1"
-              value={form.capacity}
-              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-              className="w-40 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Capaciteit (aantal tickets)">
+              <input
+                required
+                type="number"
+                min="1"
+                value={form.capacity}
+                onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+            </Field>
+            <Field label="Inschrijving sluit op (optioneel)">
+              <input
+                type="datetime-local"
+                value={form.registration_deadline}
+                onChange={(e) => setForm({ ...form, registration_deadline: e.target.value })}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              />
+            </Field>
+          </div>
+          <p className="-mt-2 text-xs text-zinc-400">
+            Laat leeg om inschrijvingen open te houden tot het evenement start of
+            uitverkocht is.
+          </p>
 
           <Field label="Rekening voor overschrijvingen">
             <select
@@ -406,9 +445,28 @@ export default function AdminEventsPage() {
                     .map((t) => `${t.label} €${(t.price_cents / 100).toFixed(2)}`)
                     .join(" · ")}{" "}
                   · capaciteit {ev.capacity}
+                  {ev.registration_deadline && (
+                    <>
+                      {" "}
+                      · inschrijving sluit{" "}
+                      {new Date(ev.registration_deadline).toLocaleString("nl-BE", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <input
+                  type="datetime-local"
+                  value={
+                    ev.registration_deadline ? toDatetimeLocalValue(ev.registration_deadline) : ""
+                  }
+                  onChange={(e) => handleChangeDeadline(ev, e.target.value)}
+                  title="Inschrijving sluit op"
+                  className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                />
                 <select
                   value={ev.bank_account_id ?? ""}
                   onChange={(e) => handleChangeBankAccount(ev, e.target.value)}

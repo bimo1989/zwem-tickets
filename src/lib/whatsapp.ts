@@ -28,3 +28,10 @@ export function buildWhatsAppLink(phone: string, message: string): string | null
   if (!normalized) return null;
   return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
 }
+
+// Same idea, but without a fixed recipient — WhatsApp opens its own contact/
+// group picker so the admin can share a summary with anyone (e.g. a group
+// chat), instead of messaging one specific buyer.
+export function buildWhatsAppShareLink(message: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}

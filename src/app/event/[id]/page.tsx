@@ -46,6 +46,8 @@ export default async function EventPage({
 
   const { event, ticketsSold, priceTiers } = result;
   const remaining = Math.max(event.capacity - ticketsSold, 0);
+  const deadlinePassed =
+    !!event.registration_deadline && new Date(event.registration_deadline) < new Date();
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
@@ -92,8 +94,23 @@ export default async function EventPage({
             <span className="text-zinc-500">Beschikbaar</span>
             <span className="text-zinc-500">{remaining} plaatsen</span>
           </div>
+          {event.registration_deadline && !deadlinePassed && (
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-zinc-500">Inschrijven kan tot</span>
+              <span className="text-zinc-500">
+                {new Date(event.registration_deadline).toLocaleString("nl-BE", {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
+              </span>
+            </div>
+          )}
 
-          {remaining > 0 ? (
+          {deadlinePassed ? (
+            <p className="mt-6 text-center font-medium text-red-500">
+              De inschrijving voor dit evenement is gesloten.
+            </p>
+          ) : remaining > 0 ? (
             <BuyForm
               eventId={event.id}
               priceTiers={priceTiers.map((t) => ({

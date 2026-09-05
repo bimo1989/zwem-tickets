@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { EventRow, OrderRow } from "@/lib/supabase";
-import { buildWhatsAppLink } from "@/lib/whatsapp";
+import { buildWhatsAppLink, buildWhatsAppShareLink } from "@/lib/whatsapp";
 
 const STATUS_LABELS: Record<OrderRow["status"], string> = {
   paid: "Betaald",
@@ -86,6 +86,47 @@ export default function AdminPage() {
     return buildWhatsAppLink(order.buyer_phone, message);
   }
 
+  function buildParticipantSummaryLink(eventId: string): string | null {
+    const event = events.find((e) => e.id === eventId);
+    if (!event) return null;
+
+    const relevant = orders
+      .filter((o) => o.event_id === eventId && (o.status === "paid" || o.status === "open"))
+      .sort((a, b) => a.buyer_name.localeCompare(b.buyer_name, "nl"));
+
+    if (relevant.length === 0) return null;
+
+    const nameWidth = Math.min(
+      Math.max(...relevant.map((o) => o.buyer_name.length), 4),
+      20
+    );
+    const pad = (s: string, w: number) => (s.length > w ? s.slice(0, w - 1) + "…" : s.padEnd(w));
+
+    const header = `${pad("Naam", nameWidth)} Aantal Betaald`;
+    const lines = relevant.map((o) => {
+      const naam = pad(o.buyer_name, nameWidth);
+      const aantal = String(o.quantity).padEnd(6);
+      const betaald = o.status === "paid" ? "Ja" : "Nee";
+      return `${naam} ${aantal} ${betaald}`;
+    });
+
+    const totalPeople = relevant.reduce((sum, o) => sum + o.quantity, 0);
+    const totalPaid = relevant
+      .filter((o) => o.status === "paid")
+      .reduce((sum, o) => sum + o.quantity, 0);
+
+    const message = [
+      `*${event.title}* (${event.event_date})`,
+      "```",
+      header,
+      ...lines,
+      "```",
+      `Totaal: ${totalPeople} personen, ${totalPaid} betaald`,
+    ].join("\n");
+
+    return buildWhatsAppShareLink(message);
+  }
+
   function exportCsv() {
     const rows = [
       ["Naam", "E-mail", "Telefoon", "Aantal", "Categorie", "Bedrag (EUR)", "Status", "Besteld op", "Ticketcode"],
@@ -141,6 +182,20 @@ export default function AdminPage() {
             >
               Exporteer CSV
             </button>
+            {selectedEventId !== "all" &&
+              (() => {
+                const link = buildParticipantSummaryLink(selectedEventId);
+                return link ? (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                  >
+                    Deel deelnemerslijst via WhatsApp
+                  </a>
+                ) : null;
+              })()}
           </div>
         </div>
 

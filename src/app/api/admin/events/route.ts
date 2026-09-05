@@ -16,6 +16,7 @@ const eventSchema = z.object({
   location: z.string().trim().max(300).optional().or(z.literal("")),
   price_tiers: z.array(priceTierSchema).min(1, "Voeg minstens 1 prijscategorie toe."),
   capacity: z.coerce.number().int().min(1),
+  registration_deadline: z.string().trim().nullable().optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   is_published: z.boolean().optional(),
 });
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { description, location, price_tiers, ...rest } = parsed.data;
+  const { description, location, price_tiers, registration_deadline, ...rest } = parsed.data;
   const supabase = getSupabaseAdmin();
   const lowestPriceCents = Math.min(...price_tiers.map((t) => t.price_cents));
 
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       ...rest,
       description: description || null,
       location: location || null,
+      registration_deadline: registration_deadline || null,
       price_cents: lowestPriceCents,
       is_published: parsed.data.is_published ?? true,
     })

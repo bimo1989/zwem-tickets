@@ -55,14 +55,17 @@ export default async function Home() {
           {upcoming.map(({ event, ticketsSold, tierCount }) => {
             const remaining = event.capacity - ticketsSold;
             const soldOut = remaining <= 0;
+            const deadlinePassed =
+              !!event.registration_deadline && new Date(event.registration_deadline) < new Date();
+            const closed = soldOut || deadlinePassed;
 
             return (
               <Link
                 key={event.id}
-                href={soldOut ? "#" : `/event/${event.id}`}
-                aria-disabled={soldOut}
+                href={closed ? "#" : `/event/${event.id}`}
+                aria-disabled={closed}
                 className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition dark:border-zinc-800 dark:bg-zinc-900 ${
-                  soldOut
+                  closed
                     ? "pointer-events-none opacity-60"
                     : "hover:border-zinc-400 dark:hover:border-zinc-600"
                 }`}
@@ -86,10 +89,14 @@ export default async function Home() {
                     </p>
                     <p
                       className={`mt-1 text-xs font-medium ${
-                        soldOut ? "text-red-500" : "text-emerald-600"
+                        closed ? "text-red-500" : "text-emerald-600"
                       }`}
                     >
-                      {soldOut ? "Uitverkocht" : `Nog ${remaining} plaatsen`}
+                      {soldOut
+                        ? "Uitverkocht"
+                        : deadlinePassed
+                          ? "Inschrijving gesloten"
+                          : `Nog ${remaining} plaatsen`}
                     </p>
                   </div>
                 </div>
