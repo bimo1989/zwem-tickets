@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { getSupabaseAdmin, type EventRow, type EventPriceTierRow } from "@/lib/supabase";
 import { formatEuroCents } from "@/lib/mollie";
 import { getEventTheme, EventThemeIcon } from "@/lib/eventTheme";
@@ -63,6 +64,15 @@ export default async function EventPage({
             className="absolute -right-4 -bottom-6 h-36 w-36 text-white/20"
           />
           <div className="relative">
+            <div className="mb-3 inline-block rounded-lg bg-white px-2.5 py-1 shadow-sm">
+              <Image
+                src="/logo-wordmark.jpg"
+                alt="vzw MC Attawassul"
+                width={586}
+                height={120}
+                className="h-5 w-auto"
+              />
+            </div>
             <h1 className="text-2xl font-semibold">{event.title}</h1>
             <p className="mt-2 text-white/90">
               {formatDate(event.event_date)} · {event.start_time.slice(0, 5)}–

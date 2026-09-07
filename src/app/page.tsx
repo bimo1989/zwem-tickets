@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getSupabaseAdmin, type EventRow } from "@/lib/supabase";
 import { formatEuroCents } from "@/lib/mollie";
 import { getEventTheme, EventThemeIcon } from "@/lib/eventTheme";
@@ -48,10 +49,17 @@ export default async function Home() {
             }}
           />
           <div className="relative">
-            <p className="text-sm font-medium uppercase tracking-wide text-sky-200">
-              MC Attawassul vzw
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">Aankomende evenementen</h1>
+            <div className="inline-block rounded-lg bg-white px-3 py-1.5 shadow-sm">
+              <Image
+                src="/logo-wordmark.jpg"
+                alt="vzw MC Attawassul"
+                width={586}
+                height={120}
+                className="h-7 w-auto"
+                priority
+              />
+            </div>
+            <h1 className="mt-4 text-3xl font-bold">Aankomende evenementen</h1>
             <p className="mt-2 text-sky-100">
               Koop je ticket online en betaal direct.
             </p>

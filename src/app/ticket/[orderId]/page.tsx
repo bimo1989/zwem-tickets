@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import QRCode from "qrcode";
 import { getSupabaseAdmin, type EventRow, type OrderRow } from "@/lib/supabase";
 import { getBankAccountForEvent, getRemittanceTemplate, renderRemittanceTemplate } from "@/lib/sepaQr";
@@ -42,7 +43,21 @@ export default async function TicketPage({
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="mx-auto max-w-md px-6 py-16 text-center">
-        <StatusBanner status={order.status} />
+        <div className="flex justify-center">
+          <div className="inline-block rounded-lg bg-white px-3 py-1.5 shadow-sm">
+            <Image
+              src="/logo-wordmark.jpg"
+              alt="vzw MC Attawassul"
+              width={586}
+              height={120}
+              className="h-7 w-auto"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <StatusBanner status={order.status} />
+        </div>
 
         <h1 className="mt-6 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
           {event.title}
