@@ -57,7 +57,9 @@ export default async function Home() {
             const soldOut = remaining <= 0;
             const deadlinePassed =
               !!event.registration_deadline && new Date(event.registration_deadline) < new Date();
-            const closed = soldOut || deadlinePassed;
+            // A sold-out event with a waitlist is still clickable — visitors
+            // need to reach the event page to sign up for it.
+            const closed = deadlinePassed || (soldOut && !event.waitlist_enabled);
 
             return (
               <Link
@@ -89,13 +91,19 @@ export default async function Home() {
                     </p>
                     <p
                       className={`mt-1 text-xs font-medium ${
-                        closed ? "text-red-500" : "text-emerald-600"
+                        closed
+                          ? "text-red-500"
+                          : soldOut
+                            ? "text-amber-600"
+                            : "text-emerald-600"
                       }`}
                     >
-                      {soldOut
-                        ? "Uitverkocht"
-                        : deadlinePassed
-                          ? "Inschrijving gesloten"
+                      {deadlinePassed
+                        ? "Inschrijving gesloten"
+                        : soldOut
+                          ? event.waitlist_enabled
+                            ? "Uitverkocht — wachtlijst"
+                            : "Uitverkocht"
                           : `Nog ${remaining} plaatsen`}
                     </p>
                   </div>

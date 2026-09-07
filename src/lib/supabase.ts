@@ -30,6 +30,7 @@ export type EventRow = {
   capacity: number;
   registration_deadline: string | null;
   bank_account_id: string | null;
+  waitlist_enabled: boolean;
   is_published: boolean;
   created_at: string;
 };
@@ -60,6 +61,17 @@ export type EventPriceTierRow = {
   price_cents: number;
   display_order: number;
   created_at: string;
+};
+
+export type WaitlistEntryRow = {
+  id: string;
+  event_id: string;
+  buyer_name: string;
+  buyer_email: string;
+  buyer_phone: string | null;
+  quantity: number;
+  created_at: string;
+  promoted_order_id: string | null;
 };
 
 export type BankAccountRow = {

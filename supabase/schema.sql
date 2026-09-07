@@ -24,6 +24,7 @@ create table if not exists events (
   capacity integer not null,             -- max number of tickets
   registration_deadline timestamptz,     -- optional; after this moment, no new orders even if not sold out
   bank_account_id uuid references bank_accounts(id), -- where a bank-transfer payment should land; null = bank transfer unavailable for this event
+  waitlist_enabled boolean not null default false, -- offer a waitlist sign-up once sold out
   is_published boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -58,10 +59,25 @@ create table if not exists orders (
   paid_at timestamptz
 );
 
+-- Waitlist sign-ups for a sold-out event (only offered when
+-- events.waitlist_enabled is true). An admin manually converts an entry
+-- into a real order once a spot frees up.
+create table if not exists waitlist_entries (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references events(id) on delete cascade,
+  buyer_name text not null,
+  buyer_email text not null,
+  buyer_phone text,
+  quantity integer not null check (quantity > 0),
+  created_at timestamptz not null default now(),
+  promoted_order_id uuid references orders(id)
+);
+
 create index if not exists orders_event_id_idx on orders(event_id);
 create index if not exists orders_status_idx on orders(status);
 create index if not exists orders_mollie_payment_id_idx on orders(mollie_payment_id);
 create index if not exists event_price_tiers_event_id_idx on event_price_tiers(event_id);
+create index if not exists waitlist_entries_event_id_idx on waitlist_entries(event_id);
 
 -- Singleton settings row (the boolean-primary-key trick guarantees there's
 -- ever only one row).
@@ -94,3 +110,4 @@ alter table events enable row level security;
 alter table event_price_tiers enable row level security;
 alter table orders enable row level security;
 alter table app_settings enable row level security;
+alter table waitlist_entries enable row level security;

@@ -19,6 +19,7 @@ type FormState = {
   capacity: string;
   registration_deadline: string;
   bank_account_id: string;
+  waitlist_enabled: boolean;
   is_published: boolean;
 };
 
@@ -33,6 +34,7 @@ const emptyForm: FormState = {
   capacity: "20",
   registration_deadline: "",
   bank_account_id: "",
+  waitlist_enabled: false,
   is_published: true,
 };
 
@@ -57,6 +59,7 @@ export default function AdminEventsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   function loadEvents() {
     fetch("/api/admin/events")
@@ -96,7 +99,7 @@ export default function AdminEventsPage() {
     setForm((f) => ({ ...f, priceTiers: f.priceTiers.filter((_, i) => i !== index) }));
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
@@ -114,35 +117,45 @@ export default function AdminEventsPage() {
       return;
     }
 
-    const res = await fetch("/api/admin/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        description: form.description,
-        event_date: form.event_date,
-        start_time: form.start_time,
-        end_time: form.end_time,
-        location: form.location,
-        price_tiers,
-        capacity: parseInt(form.capacity, 10),
-        registration_deadline: form.registration_deadline
-          ? new Date(form.registration_deadline).toISOString()
-          : null,
-        bank_account_id: form.bank_account_id || null,
-        is_published: form.is_published,
-      }),
-    });
+    const payload = {
+      title: form.title,
+      description: form.description,
+      event_date: form.event_date,
+      start_time: form.start_time,
+      end_time: form.end_time,
+      location: form.location,
+      price_tiers,
+      capacity: parseInt(form.capacity, 10),
+      registration_deadline: form.registration_deadline
+        ? new Date(form.registration_deadline).toISOString()
+        : null,
+      bank_account_id: form.bank_account_id || null,
+      waitlist_enabled: form.waitlist_enabled,
+      is_published: form.is_published,
+    };
+
+    const res = editingEventId
+      ? await fetch(`/api/admin/events/${editingEventId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/admin/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error ?? "Kon evenement niet aanmaken.");
+      setError(data.error ?? "Kon evenement niet opslaan.");
       setSubmitting(false);
       return;
     }
 
     setForm(emptyForm);
     setShowForm(false);
+    setEditingEventId(null);
     setSubmitting(false);
     loadEvents();
   }
@@ -219,11 +232,47 @@ export default function AdminEventsPage() {
       capacity: String(ev.capacity),
       registration_deadline: "",
       bank_account_id: ev.bank_account_id ?? "",
+      waitlist_enabled: false,
       is_published: false,
     });
+    setEditingEventId(null);
     setShowForm(true);
     setError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleEdit(ev: EventWithTiers) {
+    const sortedTiers = [...ev.event_price_tiers].sort(
+      (a, b) => a.display_order - b.display_order
+    );
+    setForm({
+      title: ev.title,
+      description: ev.description ?? "",
+      event_date: ev.event_date,
+      start_time: ev.start_time.slice(0, 5),
+      end_time: ev.end_time.slice(0, 5),
+      location: ev.location ?? "",
+      priceTiers: sortedTiers.length
+        ? sortedTiers.map((t) => ({ label: t.label, price_euro: (t.price_cents / 100).toFixed(2) }))
+        : [{ label: "Standaard", price_euro: "" }],
+      capacity: String(ev.capacity),
+      registration_deadline: ev.registration_deadline
+        ? toDatetimeLocalValue(ev.registration_deadline)
+        : "",
+      bank_account_id: ev.bank_account_id ?? "",
+      waitlist_enabled: ev.waitlist_enabled,
+      is_published: ev.is_published,
+    });
+    setEditingEventId(ev.id);
+    setShowForm(true);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelForm() {
+    setShowForm(false);
+    setEditingEventId(null);
+    setError(null);
   }
 
   return (
@@ -234,11 +283,14 @@ export default function AdminEventsPage() {
         </h1>
         <button
           onClick={() => {
-            if (!showForm) {
+            if (showForm) {
+              handleCancelForm();
+            } else {
               const defaultAccount = bankAccounts.find((a) => a.is_default);
               setForm({ ...emptyForm, bank_account_id: defaultAccount?.id ?? "" });
+              setEditingEventId(null);
+              setShowForm(true);
             }
-            setShowForm((v) => !v);
           }}
           className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
@@ -248,9 +300,14 @@ export default function AdminEventsPage() {
 
       {showForm && (
         <form
-          onSubmit={handleCreate}
+          onSubmit={handleSubmit}
           className="mt-6 flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
         >
+          {editingEventId && (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+              Je past een bestaand evenement aan.
+            </p>
+          )}
           <Field label="Titel">
             <input
               required
@@ -413,6 +470,15 @@ export default function AdminEventsPage() {
             Meteen publiceren (zichtbaar op de site)
           </label>
 
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={form.waitlist_enabled}
+              onChange={(e) => setForm({ ...form, waitlist_enabled: e.target.checked })}
+            />
+            Wachtlijst aanbieden zodra uitverkocht
+          </label>
+
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           <button
@@ -420,7 +486,11 @@ export default function AdminEventsPage() {
             disabled={submitting}
             className="h-11 rounded-full bg-zinc-900 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {submitting ? "Bezig..." : "Evenement aanmaken"}
+            {submitting
+              ? "Bezig..."
+              : editingEventId
+                ? "Wijzigingen opslaan"
+                : "Evenement aanmaken"}
           </button>
         </form>
       )}
@@ -445,6 +515,12 @@ export default function AdminEventsPage() {
                     .map((t) => `${t.label} €${(t.price_cents / 100).toFixed(2)}`)
                     .join(" · ")}{" "}
                   · capaciteit {ev.capacity}
+                  {ev.waitlist_enabled && (
+                    <>
+                      {" "}
+                      · <span className="text-amber-600 dark:text-amber-400">wachtlijst aan</span>
+                    </>
+                  )}
                   {ev.registration_deadline && (
                     <>
                       {" "}
@@ -486,6 +562,12 @@ export default function AdminEventsPage() {
                 >
                   Tickets
                 </Link>
+                <button
+                  onClick={() => handleEdit(ev)}
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                >
+                  Bewerk
+                </button>
                 <button
                   onClick={() => handleDuplicate(ev)}
                   className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"

@@ -108,13 +108,31 @@ niet kwijt te raken).
   bericht naar de koper, bv. om te melden dat de betaling nog niet in orde
   is — geen WhatsApp-account of API nodig), en zicht op wie al is ingecheckt
   (login met `ADMIN_PASSWORD`)
-- `/admin/events` — evenementen aanmaken, publiceren/verbergen, verwijderen,
-  en per evenement een bankrekening kiezen voor overschrijvingen
+- `/admin/events` — evenementen aanmaken, **bewerken** (alle velden, incl.
+  prijscategorieën), dupliceren als sjabloon, publiceren/verbergen,
+  verwijderen (typ "verwijder evenement" ter bevestiging), en per evenement
+  een bankrekening en inschrijvingsdeadline instellen
+- `/admin/waitlist` — wachtlijst-aanmeldingen per evenement bekijken en
+  omzetten naar een echte bestelling (overschrijving) zodra er een plaats
+  vrijkomt, of verwijderen
 - `/admin/scan` — camera-scanner voor de ingang: scan de QR-code van een
   ticket en het wordt automatisch afgevinkt (met foutmelding bij een
   niet-betaald, al gebruikt, of onbekend ticket)
 - `/admin/settings` — bankrekeningen beheren (toevoegen, standaard instellen,
   verwijderen) en het sjabloon voor de betaalmededeling aanpassen
+
+### Wachtlijst
+
+Schakel "Wachtlijst aanbieden zodra uitverkocht" in bij een evenement (in
+`/admin/events`, aanmaken of bewerken). Zodra alle tickets betaald zijn,
+toont de evenementpagina in plaats van "uitverkocht" een aanmeldformulier
+(naam, e-mail, telefoon, aantal personen) — en blijft het evenement
+klikbaar op de homepage, met het label "Uitverkocht — wachtlijst". Onder
+`/admin/waitlist` zie je de aanmeldingen per evenement; bij "Omzetten naar
+bestelling" kies je de prijscategorie en wordt er een normale bestelling
+(via overschrijving) aangemaakt, die je net als elke andere bestelling
+verder afhandelt via `/admin` (WhatsApp-link sturen, markeren als betaald,
+...). Dit vereist wel dat het evenement een bankrekening heeft ingesteld.
 
 ## Voorkomen dat het gratis Supabase-project pauzeert
 
@@ -142,5 +160,6 @@ Unregister-ScheduledTask -TaskName "ZwemTicketsKeepAlive" -Confirm:$false
 ## Nog niet inbegrepen (mogelijke volgende stappen)
 
 - Automatische terugbetaling/annulering vanuit de admin-pagina
-- Evenementen bewerken (nu enkel publiceren/verbergen/verwijderen — prijs of
-  capaciteit aanpassen kan momenteel alleen via Supabase)
+- Automatische e-mail/WhatsApp-melding naar wachtlijst-aanmeldingen zodra ze
+  worden omgezet (nu enkel handmatig via de bestaande WhatsApp-knop in
+  `/admin`)

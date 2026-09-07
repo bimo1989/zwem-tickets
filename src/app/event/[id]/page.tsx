@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSupabaseAdmin, type EventRow, type EventPriceTierRow } from "@/lib/supabase";
 import { formatEuroCents } from "@/lib/mollie";
 import BuyForm from "./buy-form";
+import WaitlistForm from "./waitlist-form";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +123,8 @@ export default async function EventPage({
               bankTransferAvailable={event.bank_account_id != null}
               mollieAvailable={!!process.env.MOLLIE_API_KEY}
             />
+          ) : event.waitlist_enabled ? (
+            <WaitlistForm eventId={event.id} />
           ) : (
             <p className="mt-6 text-center font-medium text-red-500">
               Dit evenement is uitverkocht.

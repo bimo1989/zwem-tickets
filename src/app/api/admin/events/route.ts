@@ -18,6 +18,7 @@ const eventSchema = z.object({
   capacity: z.coerce.number().int().min(1),
   registration_deadline: z.string().trim().nullable().optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
+  waitlist_enabled: z.boolean().optional(),
   is_published: z.boolean().optional(),
 });
 
