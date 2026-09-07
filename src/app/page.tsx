@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSupabaseAdmin, type EventRow } from "@/lib/supabase";
 import { formatEuroCents } from "@/lib/mollie";
+import { getEventTheme, EventThemeIcon } from "@/lib/eventTheme";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,24 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Aankomende evenementen
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Koop je ticket online en betaal direct.
-        </p>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 via-sky-800 to-cyan-700 px-8 py-12 text-white shadow-lg">
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: "radial-gradient(circle, white 1.5px, transparent 1.5px)",
+              backgroundSize: "22px 22px",
+            }}
+          />
+          <div className="relative">
+            <p className="text-sm font-medium uppercase tracking-wide text-sky-200">
+              MC Attawassul vzw
+            </p>
+            <h1 className="mt-2 text-3xl font-bold">Aankomende evenementen</h1>
+            <p className="mt-2 text-sky-100">
+              Koop je ticket online en betaal direct.
+            </p>
+          </div>
+        </div>
 
         <div className="mt-10 flex flex-col gap-5">
           {upcoming.length === 0 && (
@@ -60,19 +73,26 @@ export default async function Home() {
             // A sold-out event with a waitlist is still clickable — visitors
             // need to reach the event page to sign up for it.
             const closed = deadlinePassed || (soldOut && !event.waitlist_enabled);
+            const theme = getEventTheme(event.title);
 
             return (
               <Link
                 key={event.id}
                 href={closed ? "#" : `/event/${event.id}`}
                 aria-disabled={closed}
-                className={`rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition dark:border-zinc-800 dark:bg-zinc-900 ${
+                className={`overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition dark:border-zinc-800 dark:bg-zinc-900 ${
                   closed
                     ? "pointer-events-none opacity-60"
                     : "hover:border-zinc-400 dark:hover:border-zinc-600"
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className={`relative h-16 overflow-hidden bg-gradient-to-br ${theme.gradient}`}>
+                  <EventThemeIcon
+                    icon={theme.icon}
+                    className="absolute -right-3 -bottom-4 h-24 w-24 text-white/25"
+                  />
+                </div>
+                <div className="flex items-start justify-between gap-4 p-5">
                   <div>
                     <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
                       {event.title}

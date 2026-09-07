@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin, type EventRow, type EventPriceTierRow } from "@/lib/supabase";
 import { formatEuroCents } from "@/lib/mollie";
+import { getEventTheme, EventThemeIcon } from "@/lib/eventTheme";
 import BuyForm from "./buy-form";
 import WaitlistForm from "./waitlist-form";
 
@@ -49,20 +50,27 @@ export default async function EventPage({
   const remaining = Math.max(event.capacity - ticketsSold, 0);
   const deadlinePassed =
     !!event.registration_deadline && new Date(event.registration_deadline) < new Date();
+  const theme = getEventTheme(event.title);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="mx-auto max-w-xl px-6 py-16">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          {event.title}
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {formatDate(event.event_date)} · {event.start_time.slice(0, 5)}–
-          {event.end_time.slice(0, 5)}
-        </p>
-        {event.location && (
-          <p className="mt-1 text-zinc-500">{event.location}</p>
-        )}
+        <div
+          className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${theme.gradient} px-6 py-8 text-white shadow-lg`}
+        >
+          <EventThemeIcon
+            icon={theme.icon}
+            className="absolute -right-4 -bottom-6 h-36 w-36 text-white/20"
+          />
+          <div className="relative">
+            <h1 className="text-2xl font-semibold">{event.title}</h1>
+            <p className="mt-2 text-white/90">
+              {formatDate(event.event_date)} · {event.start_time.slice(0, 5)}–
+              {event.end_time.slice(0, 5)}
+            </p>
+            {event.location && <p className="mt-1 text-white/80">{event.location}</p>}
+          </div>
+        </div>
         {event.description && (
           <p className="mt-4 whitespace-pre-line text-zinc-700 dark:text-zinc-300">
             {event.description}
