@@ -17,7 +17,8 @@ nodig tegen een Google Formulier.
    - Heb je de database al eerder aangemaakt? Run dan in diezelfde SQL Editor
      de bestanden uit [`supabase/migrations/`](supabase/migrations) die je nog
      niet uitvoerde, op nummer. De Mollie-instellingen zitten in
-     `0009_mollie_settings.sql`.
+     `0009_mollie_settings.sql`, de scan-codes voor vrijwilligers in
+     `0010_scanner_codes.sql`.
    - Ga naar *Project Settings → API* en noteer:
      - `Project URL` → wordt `SUPABASE_URL`
      - `service_role` key (niet de `anon` key!) → wordt `SUPABASE_SERVICE_ROLE_KEY`
@@ -134,8 +135,16 @@ niet kwijt te raken).
 - `/admin/scan` — camera-scanner voor de ingang: scan de QR-code van een
   ticket en het wordt automatisch afgevinkt (met foutmelding bij een
   niet-betaald, al gebruikt, of onbekend ticket)
-- `/admin/settings` — bankrekeningen beheren (toevoegen, standaard instellen,
-  verwijderen) en het sjabloon voor de betaalmededeling aanpassen
+- `/scan` — de inlogpagina voor vrijwilligers. Zij typen hun eigen scan-code
+  (geen admin-wachtwoord) en komen direct op de scanner terecht; ze zien geen
+  bestellingen, evenementen of instellingen, en hun sessie duurt 12 uur.
+  Codes maak je aan in `/admin/settings`, per persoon of per ploeg, en je
+  trekt ze daar ook weer in — zonder redeploy en zonder een wachtwoord dat
+  iedereen moet veranderen.
+- `/admin/settings` — de Mollie-sleutel instellen en online betalen aan- of
+  uitzetten, scan-codes voor vrijwilligers uitdelen en intrekken,
+  bankrekeningen beheren (toevoegen, standaard instellen, verwijderen) en het
+  sjabloon voor de betaalmededeling aanpassen
 
 ### Wachtlijst
 

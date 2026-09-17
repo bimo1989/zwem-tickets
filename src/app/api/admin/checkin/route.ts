@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getRole } from "@/lib/auth";
 
 const checkinSchema = z.object({
   ticketCode: z.string().trim().min(1).max(64),
 });
 
 export async function POST(req: NextRequest) {
+  // Admins and volunteers with a scan code may both check people in. proxy.ts
+  // lets a scanner cookie through without being able to validate it, so the
+  // code inside it is verified here.
+  const role = await getRole();
+  if (!role) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const parsed = checkinSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Ongeldige QR-code." }, { status: 400 });
@@ -34,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: "unpaid",
       message: `Niet betaald (${order.status}) — toegang weigeren.`,
-      order,
+      order: role === "admin" ? order : undefined,
     });
   }
 
@@ -42,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: "already_used",
       message: `Al volledig ingecheckt (${order.checked_in_count}/${order.quantity}).`,
-      order,
+      order: role === "admin" ? order : undefined,
     });
   }
 
@@ -60,6 +69,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     status: "ok",
     message: `Welkom, ${updated.buyer_name}! (${updated.checked_in_count}/${updated.quantity})`,
-    order: updated,
+    order: role === "admin" ? updated : undefined,
   });
 }

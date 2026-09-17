@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BankAccountRow, PublicAppSettings } from "@/lib/supabase";
 import MollieSection from "./mollie-section";
+import ScannerCodesSection from "./scanner-codes-section";
 
 type AccountForm = {
   label: string;
@@ -256,6 +257,8 @@ export default function AdminSettingsPage() {
           ))}
         </div>
       </section>
+
+      <ScannerCodesSection />
 
       {/* Remittance template */}
       <section className="mt-12">

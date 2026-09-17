@@ -116,3 +116,14 @@ alter table event_price_tiers enable row level security;
 alter table orders enable row level security;
 alter table app_settings enable row level security;
 alter table waitlist_entries enable row level security;
+
+-- Scan-only access codes for volunteers (see migration 0010). Handed out from
+-- /admin/settings; a holder can only reach the check-in scanner.
+create table if not exists scanner_codes (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  code text not null unique,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+alter table scanner_codes enable row level security;

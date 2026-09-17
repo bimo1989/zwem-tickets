@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -21,7 +22,10 @@ export default function AdminLoginPage() {
     });
 
     if (res.ok) {
-      router.push("/admin");
+      // A volunteer's scan code lands straight on the scanner; the admin
+      // password lands on the ticket overview.
+      const data = await res.json().catch(() => ({}));
+      router.push(data.redirectTo ?? "/admin");
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -55,6 +59,13 @@ export default function AdminLoginPage() {
         >
           {submitting ? "Bezig..." : "Inloggen"}
         </button>
+        <p className="mt-4 text-center text-xs text-zinc-400">
+          Vrijwilliger die enkel tickets komt scannen?{" "}
+          <Link href="/scan" className="underline hover:text-zinc-600">
+            Ga naar /scan
+          </Link>
+          .
+        </p>
       </form>
     </div>
   );
