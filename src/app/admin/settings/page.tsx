@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { BankAccountRow, PublicAppSettings } from "@/lib/supabase";
 import MollieSection from "./mollie-section";
+import EmailSection from "./email-section";
 import ScannerCodesSection from "./scanner-codes-section";
 
 type AccountForm = {
@@ -257,6 +258,8 @@ export default function AdminSettingsPage() {
           ))}
         </div>
       </section>
+
+      <EmailSection settings={settings} onChange={setSettings} />
 
       <ScannerCodesSection />
 

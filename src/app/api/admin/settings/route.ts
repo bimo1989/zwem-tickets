@@ -12,6 +12,7 @@ import {
   maskMollieKey,
   mollieKeyMode,
 } from "@/lib/mollie";
+import { RESEND_KEY_PATTERN, getEmailConfig, maskResendKey } from "@/lib/email";
 
 const settingsSchema = z
   .object({
@@ -39,6 +40,34 @@ const settingsSchema = z
         z.null(),
       ])
       .optional(),
+    email_enabled: z.boolean().optional(),
+    resend_api_key: z
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(
+            RESEND_KEY_PATTERN,
+            "Dit lijkt geen Resend API-sleutel. Die begint met re_."
+          ),
+        z.null(),
+      ])
+      .optional(),
+    ticket_email_from: z
+      .union([
+        z
+          .string()
+          .trim()
+          .max(320)
+          .refine(
+            // Resend accepts both "iemand@domein.be" and
+            // "MC Attawassul <iemand@domein.be>".
+            (v) => /^[^<>]*<[^@\s<>]+@[^@\s<>]+\.[a-z]{2,}>$|^[^@\s<>]+@[^@\s<>]+\.[a-z]{2,}$/i.test(v),
+            "Gebruik een e-mailadres, eventueel als: MC Attawassul <tickets@jouwdomein.be>"
+          ),
+        z.null(),
+      ])
+      .optional(),
   })
   .refine((v) => Object.keys(v).length > 0, "Geen wijzigingen meegegeven.");
 
@@ -49,13 +78,17 @@ const settingsSchema = z
 async function buildPublicSettings(
   row: Pick<AppSettingsRow, "remittance_template"> | null
 ): Promise<PublicAppSettings> {
-  const mollie = await getMollieConfig();
+  const [mollie, email] = await Promise.all([getMollieConfig(), getEmailConfig()]);
   return {
     remittance_template: row?.remittance_template ?? "",
     mollie_enabled: mollie.enabled,
     mollie_key_hint: mollie.apiKey ? maskMollieKey(mollie.apiKey) : null,
     mollie_mode: mollie.mode,
     mollie_key_source: mollie.source,
+    email_enabled: email.enabled,
+    email_key_hint: email.apiKey ? maskResendKey(email.apiKey) : null,
+    email_from: email.fromAddress,
+    email_key_source: email.source,
   };
 }
 
@@ -122,6 +155,19 @@ export async function PATCH(req: NextRequest) {
         {
           error:
             "De database kent de Mollie-instellingen nog niet. Run supabase/migrations/0009_mollie_settings.sql in de Supabase SQL Editor en probeer opnieuw.",
+        },
+        { status: 409 }
+      );
+    }
+    if (
+      error.message.includes("resend_api_key") ||
+      error.message.includes("ticket_email_from") ||
+      error.message.includes("email_enabled")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "De database kent de e-mailinstellingen nog niet. Run supabase/migrations/0011_email_settings.sql in de Supabase SQL Editor en probeer opnieuw.",
         },
         { status: 409 }
       );

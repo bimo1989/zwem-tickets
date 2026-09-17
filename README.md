@@ -18,7 +18,8 @@ nodig tegen een Google Formulier.
      de bestanden uit [`supabase/migrations/`](supabase/migrations) die je nog
      niet uitvoerde, op nummer. De Mollie-instellingen zitten in
      `0009_mollie_settings.sql`, de scan-codes voor vrijwilligers in
-     `0010_scanner_codes.sql`.
+     `0010_scanner_codes.sql`, de e-mailinstellingen in
+     `0011_email_settings.sql`.
    - Ga naar *Project Settings → API* en noteer:
      - `Project URL` → wordt `SUPABASE_URL`
      - `service_role` key (niet de `anon` key!) → wordt `SUPABASE_SERVICE_ROLE_KEY`
@@ -41,6 +42,13 @@ nodig tegen een Google Formulier.
    - Gratis tier is ruim voldoende voor een paar events per maand.
    - Voeg je eigen domein toe (of gebruik voorlopig hun test-adres) en maak
      een API key aan.
+   - Sleutel en afzender vul je in bij **`/admin/settings` → Bevestigingsmails**,
+     niet in een env-variabele. Klik daarna op **"Testmail sturen"**: dat bewijst
+     in één keer dat de sleutel, de afzender én je domeinverificatie kloppen.
+     Met de schakelaar zet je de mails aan of uit zonder de sleutel te wissen.
+   - Het domein in het afzender-adres moet in Resend geverifieerd zijn, anders
+     weigert Resend te versturen. Nog geen eigen domein? `onboarding@resend.dev`
+     werkt om te testen, maar mailt enkel naar je eigen Resend-account-adres.
 
 4. **Vercel** (hosting, gratis tier) — https://vercel.com
    - Log in met GitHub.
@@ -119,6 +127,10 @@ niet kwijt te raken).
 - `/ticket/[orderId]` — bevestigingspagina; toont de check-in QR bij een
   betaald ticket, of de betaal-QR + kopieerbare IBAN/bedrag/mededeling
   zolang een overschrijving nog niet bevestigd is
+- `/api/tickets/[orderId]/pdf` — hetzelfde ticket als PDF om te bewaren,
+  door te sturen of af te drukken (knop **"Bewaar je ticket (PDF)"** op de
+  bevestigingspagina, en een link in de bevestigingsmail). Enkel voor een
+  betaald ticket
 - `/admin` — overzicht van alle bestellingen per evenement, met CSV-export,
   een **"Markeer betaald"**-knop per openstaande overschrijving, een
   **"WhatsApp sturen"**-knop (opent jouw eigen WhatsApp met een kant-en-klaar
@@ -142,7 +154,8 @@ niet kwijt te raken).
   trekt ze daar ook weer in — zonder redeploy en zonder een wachtwoord dat
   iedereen moet veranderen.
 - `/admin/settings` — de Mollie-sleutel instellen en online betalen aan- of
-  uitzetten, scan-codes voor vrijwilligers uitdelen en intrekken,
+  uitzetten, de bevestigingsmails instellen en testen, scan-codes voor
+  vrijwilligers uitdelen en intrekken,
   bankrekeningen beheren (toevoegen, standaard instellen, verwijderen) en het
   sjabloon voor de betaalmededeling aanpassen
 

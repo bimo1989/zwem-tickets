@@ -1,14 +1,71 @@
 import { Resend } from "resend";
 import QRCode from "qrcode";
-import type { EventRow, OrderRow } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin, type EventRow, type OrderRow } from "./supabase";
 
-export async function sendTicketEmail(event: EventRow, order: OrderRow) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.TICKET_EMAIL_FROM;
+export type EmailConfig = {
+  apiKey: string | null;
+  fromAddress: string | null;
+  /** Whether the admin wants confirmation mails sent at all. */
+  enabled: boolean;
+  source: "settings" | "env" | null;
+};
 
+/** Resend keys look like `re_` followed by a base58-ish string. */
+export const RESEND_KEY_PATTERN = /^re_[A-Za-z0-9_-]{10,}$/;
+
+/** `re_abcd…wxyz` — enough to recognise a key, not enough to use it. */
+export function maskResendKey(apiKey: string): string {
+  return `${apiKey.slice(0, 7)}…${apiKey.slice(-4)}`;
+}
+
+// Server-only. The key and sender address live in app_settings (managed from
+// /admin/settings), with the environment variables as a fallback for installs
+// that were set up before they moved into the database.
+export async function getEmailConfig(client?: SupabaseClient): Promise<EmailConfig> {
+  const supabase = client ?? getSupabaseAdmin();
+
+  // An error here means the 0011 migration hasn't run yet — fall back to the
+  // environment instead of silently dropping mails.
+  const { data } = await supabase
+    .from("app_settings")
+    .select("resend_api_key, ticket_email_from, email_enabled")
+    .eq("id", true)
+    .maybeSingle();
+
+  const settingsKey = data?.resend_api_key?.trim() || null;
+  const settingsFrom = data?.ticket_email_from?.trim() || null;
+  const envKey = process.env.RESEND_API_KEY?.trim() || null;
+  const envFrom = process.env.TICKET_EMAIL_FROM?.trim() || null;
+
+  return {
+    apiKey: settingsKey ?? envKey,
+    fromAddress: settingsFrom ?? envFrom,
+    enabled: data ? data.email_enabled : true,
+    source: settingsKey ? "settings" : envKey ? "env" : null,
+  };
+}
+
+/** True when a confirmation mail can actually be sent. */
+export async function isEmailAvailable(client?: SupabaseClient): Promise<boolean> {
+  const { apiKey, fromAddress, enabled } = await getEmailConfig(client);
+  return enabled && !!apiKey && !!fromAddress;
+}
+
+export async function sendTicketEmail(
+  event: EventRow,
+  order: OrderRow,
+  client?: SupabaseClient
+) {
+  const { apiKey, fromAddress, enabled } = await getEmailConfig(client);
+
+  if (!enabled) {
+    console.warn("Confirmation mails are switched off — skipping.");
+    return;
+  }
   if (!apiKey || !fromAddress) {
     console.warn(
-      "RESEND_API_KEY or TICKET_EMAIL_FROM not set — skipping confirmation email."
+      "No Resend key or sender address configured — skipping confirmation email."
     );
     return;
   }
@@ -16,6 +73,9 @@ export async function sendTicketEmail(event: EventRow, order: OrderRow) {
   const resend = new Resend(apiKey);
   const qrDataUrl = await QRCode.toDataURL(order.ticket_code, { width: 300 });
   const qrCid = "ticket-qr";
+  const ticketUrl = process.env.APP_URL
+    ? `${process.env.APP_URL}/ticket/${order.id}`
+    : null;
 
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
@@ -32,6 +92,15 @@ export async function sendTicketEmail(event: EventRow, order: OrderRow) {
         <img src="cid:${qrCid}" alt="QR-code ticket" width="220" height="220" />
         <p style="font-size: 12px; color: #666;">Toon deze code aan de ingang</p>
       </div>
+      ${
+        ticketUrl
+          ? `<p style="text-align:center;">
+               <a href="${ticketUrl}" style="color:#059669;">Je ticket online bekijken</a>
+               &nbsp;·&nbsp;
+               <a href="${ticketUrl.replace(`/ticket/${order.id}`, `/api/tickets/${order.id}/pdf`)}" style="color:#059669;">Bewaren als PDF</a>
+             </p>`
+          : ""
+      }
       <p style="font-size: 12px; color: #999;">Ticketcode: ${order.ticket_code}</p>
     </div>
   `;
@@ -49,6 +118,40 @@ export async function sendTicketEmail(event: EventRow, order: OrderRow) {
       },
     ],
   });
+}
+
+/**
+ * Sends a short mail to an address the admin picks, so they can confirm the
+ * key, the sender address and their domain verification all work before a
+ * real buyer depends on it.
+ */
+export async function sendTestEmail(to: string, client?: SupabaseClient) {
+  const { apiKey, fromAddress } = await getEmailConfig(client);
+
+  if (!apiKey) throw new Error("Geen Resend API-sleutel ingesteld.");
+  if (!fromAddress) throw new Error("Geen afzender-adres ingesteld.");
+
+  const resend = new Resend(apiKey);
+  const { error } = await resend.emails.send({
+    from: fromAddress,
+    to,
+    subject: "Testmail vanuit de ticketsite",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>Dit werkt ✅</h2>
+        <p>
+          Deze testmail komt van de ticketsite van MC Attawassul. Krijg je hem,
+          dan worden de bevestigingsmails naar kopers ook verstuurd.
+        </p>
+        <p style="font-size: 12px; color: #999;">Afzender: ${escapeHtml(fromAddress)}</p>
+      </div>
+    `,
+  });
+
+  // The Resend SDK reports failures in the response rather than by throwing.
+  if (error) {
+    throw new Error(error.message ?? "Resend weigerde de mail.");
+  }
 }
 
 function escapeHtml(input: string): string {

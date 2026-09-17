@@ -5,6 +5,7 @@ import { getSupabaseAdmin, type EventRow, type OrderRow } from "@/lib/supabase";
 import { getBankAccountForEvent, getRemittanceTemplate, renderRemittanceTemplate } from "@/lib/sepaQr";
 import BankTransferPayment from "./bank-transfer-payment";
 import PaymentStatusWatcher from "./payment-status-watcher";
+import { isEmailAvailable } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +88,7 @@ export default async function TicketPage({
 
 async function PaidConfirmation({ order }: { order: OrderRow }) {
   const qrDataUrl = await QRCode.toDataURL(order.ticket_code, { width: 260 });
-  const emailConfigured = !!(
-    process.env.RESEND_API_KEY && process.env.TICKET_EMAIL_FROM
-  );
+  const emailConfigured = await isEmailAvailable();
 
   return (
     <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/60 dark:bg-emerald-950/30">
@@ -120,8 +119,16 @@ async function PaidConfirmation({ order }: { order: OrderRow }) {
       <p className="mt-3 text-xs text-emerald-800/70 dark:text-emerald-300/60">
         Ticketcode: {order.ticket_code}
       </p>
+
+      <a
+        href={`/api/tickets/${order.id}/pdf`}
+        className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-800"
+      >
+        Bewaar je ticket (PDF)
+      </a>
+
       {emailConfigured && (
-        <p className="mt-1 text-xs text-emerald-800/70 dark:text-emerald-300/60">
+        <p className="mt-4 text-xs text-emerald-800/70 dark:text-emerald-300/60">
           We stuurden deze bevestiging ook naar {order.buyer_email}.
         </p>
       )}

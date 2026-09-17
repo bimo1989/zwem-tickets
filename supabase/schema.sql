@@ -90,7 +90,13 @@ create table if not exists app_settings (
   -- server-side with the service-role key; falls back to the MOLLIE_API_KEY
   -- environment variable when empty.
   mollie_api_key text,
-  mollie_enabled boolean not null default true
+  mollie_enabled boolean not null default true,
+  -- Resend (ticket confirmation mails), managed from /admin/settings. Same
+  -- deal: server-side only, falls back to the RESEND_API_KEY and
+  -- TICKET_EMAIL_FROM environment variables when empty.
+  resend_api_key text,
+  ticket_email_from text,
+  email_enabled boolean not null default true
 );
 insert into app_settings (id) values (true) on conflict (id) do nothing;
 
