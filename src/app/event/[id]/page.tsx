@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getSupabaseAdmin, type EventRow, type EventPriceTierRow } from "@/lib/supabase";
-import { formatEuroCents } from "@/lib/mollie";
+import { formatEuroCents, isMollieAvailable } from "@/lib/mollie";
 import { getEventTheme, EventThemeIcon } from "@/lib/eventTheme";
 import BuyForm from "./buy-form";
 import WaitlistForm from "./waitlist-form";
@@ -139,7 +139,7 @@ export default async function EventPage({
               }))}
               maxQuantity={Math.min(remaining, 10)}
               bankTransferAvailable={event.bank_account_id != null}
-              mollieAvailable={!!process.env.MOLLIE_API_KEY}
+              mollieAvailable={await isMollieAvailable()}
             />
           ) : event.waitlist_enabled ? (
             <WaitlistForm eventId={event.id} />

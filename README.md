@@ -14,6 +14,10 @@ nodig tegen een Google Formulier.
    - Ga naar *SQL Editor* → *New query*, plak de inhoud van
      [`supabase/schema.sql`](supabase/schema.sql) en klik *Run*. Dit maakt de
      tabellen `events` en `orders` aan.
+   - Heb je de database al eerder aangemaakt? Run dan in diezelfde SQL Editor
+     de bestanden uit [`supabase/migrations/`](supabase/migrations) die je nog
+     niet uitvoerde, op nummer. De Mollie-instellingen zitten in
+     `0009_mollie_settings.sql`.
    - Ga naar *Project Settings → API* en noteer:
      - `Project URL` → wordt `SUPABASE_URL`
      - `service_role` key (niet de `anon` key!) → wordt `SUPABASE_SERVICE_ROLE_KEY`
@@ -23,6 +27,12 @@ nodig tegen een Google Formulier.
    - Zolang je account nog niet volledig geverifieerd is, kun je al testen
      met de **test API key** (Dashboard → Developers → API keys).
    - Zodra geverifieerd: gebruik de **live API key** voor echte betalingen.
+   - De sleutel vul je in bij **`/admin/settings` → Online betalen (Mollie)**,
+     niet in een env-variabele. Ze wordt eerst bij Mollie gecontroleerd en
+     daarna server-side opgeslagen; in de admin zie je enkel nog een gemaskeerd
+     stukje ervan terug. Met de schakelaar daar zet je online betalen aan of
+     uit zonder de sleutel te wissen (staat het uit, dan blijft enkel
+     overschrijven met QR-code over).
    - Wero: als Mollie Wero voor jouw account activeert, verschijnt dat
      automatisch als betaalmethode in de Mollie-checkout — geen code nodig.
 
@@ -87,8 +97,9 @@ niet kwijt te raken).
    `.env.local`, maar met `APP_URL` = je echte Vercel/domeinnaam
    (bv. `https://tickets-mcattawassul.vercel.app`).
 4. Deploy.
-5. Test één volledige aankoop met de **Mollie test-modus** voor je live gaat.
-6. Zodra alles werkt: zet `MOLLIE_API_KEY` om naar de live-key.
+5. Test één volledige aankoop met de **Mollie test-sleutel** voor je live gaat.
+6. Zodra alles werkt: plak de live-sleutel in `/admin/settings`. Je ziet daar
+   het label **LIVE — echte betalingen** staan zodra dat gelukt is.
 
 ## Hoe het werkt
 
@@ -99,6 +110,11 @@ niet kwijt te raken).
   stuurt direct door naar de ticketpagina bij overschrijving
 - `/api/webhook/mollie` — Mollie roept dit aan zodra er betaald is; zet
   bestelling op "paid" en verstuurt de ticketmail
+- `/api/tickets/[orderId]/status` — de ticketpagina pollt dit zolang een
+  betaling openstaat. Voor een Mollie-betaling wordt de status rechtstreeks
+  bij Mollie opgevraagd, dus de koper krijgt zijn bevestiging ook als de
+  webhook traag is of ons niet kan bereiken (bv. lokaal op `localhost`).
+  De bevestiging verschijnt vanzelf op de pagina — vernieuwen is niet nodig
 - `/ticket/[orderId]` — bevestigingspagina; toont de check-in QR bij een
   betaald ticket, of de betaal-QR + kopieerbare IBAN/bedrag/mededeling
   zolang een overschrijving nog niet bevestigd is

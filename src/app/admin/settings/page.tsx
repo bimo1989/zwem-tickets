@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { BankAccountRow } from "@/lib/supabase";
+import type { BankAccountRow, PublicAppSettings } from "@/lib/supabase";
+import MollieSection from "./mollie-section";
 
 type AccountForm = {
   label: string;
@@ -27,6 +28,7 @@ export default function AdminSettingsPage() {
   const [accountError, setAccountError] = useState<string | null>(null);
   const [savingAccount, setSavingAccount] = useState(false);
 
+  const [settings, setSettings] = useState<PublicAppSettings | null>(null);
   const [template, setTemplate] = useState("");
   const [templateSaved, setTemplateSaved] = useState(true);
   const [templateError, setTemplateError] = useState<string | null>(null);
@@ -45,7 +47,10 @@ export default function AdminSettingsPage() {
     loadAccounts();
     fetch("/api/admin/settings")
       .then((res) => res.json())
-      .then((data) => setTemplate(data.settings?.remittance_template ?? ""));
+      .then((data) => {
+        setSettings(data.settings ?? null);
+        setTemplate(data.settings?.remittance_template ?? "");
+      });
   }, []);
 
   async function handleCreateAccount(e: React.FormEvent) {
@@ -109,6 +114,7 @@ export default function AdminSettingsPage() {
       return;
     }
 
+    setSettings(data.settings);
     setTemplate(data.settings.remittance_template);
     setTemplateSaved(true);
     setSavingTemplate(false);
@@ -125,8 +131,10 @@ export default function AdminSettingsPage() {
         Instellingen
       </h1>
 
+      <MollieSection settings={settings} onChange={setSettings} />
+
       {/* Bank accounts */}
-      <section className="mt-8">
+      <section className="mt-12">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
             Bankrekeningen

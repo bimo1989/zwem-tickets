@@ -87,6 +87,19 @@ export type BankAccountRow = {
 export type AppSettingsRow = {
   id: true;
   remittance_template: string;
+  mollie_api_key: string | null;
+  mollie_enabled: boolean;
+};
+
+// What /api/admin/settings returns to the browser: the same row, but with the
+// Mollie API key replaced by a masked hint so the secret never leaves the
+// server.
+export type PublicAppSettings = {
+  remittance_template: string;
+  mollie_enabled: boolean;
+  mollie_key_hint: string | null;
+  mollie_mode: "test" | "live" | null;
+  mollie_key_source: "settings" | "env" | null;
 };
 
 export type EventSalesRow = {

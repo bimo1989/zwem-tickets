@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const mollie = getMollieClient();
+    const mollie = await getMollieClient(supabase);
     const payment = await mollie.payments.create({
       amount: { currency: "EUR", value: formatEuroCents(amountCents) },
       description: `${event.title} (${quantity}x)`,

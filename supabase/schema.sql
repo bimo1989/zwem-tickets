@@ -85,7 +85,12 @@ create table if not exists app_settings (
   id boolean primary key default true check (id),
   -- Tokens: {nummer} = sequential order number, {evenement} = event title,
   -- {naam} = buyer name.
-  remittance_template text not null default '{nummer} - {evenement} - {naam}'
+  remittance_template text not null default '{nummer} - {evenement} - {naam}',
+  -- Mollie (online payments), managed from /admin/settings. Only ever read
+  -- server-side with the service-role key; falls back to the MOLLIE_API_KEY
+  -- environment variable when empty.
+  mollie_api_key text,
+  mollie_enabled boolean not null default true
 );
 insert into app_settings (id) values (true) on conflict (id) do nothing;
 
