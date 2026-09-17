@@ -91,6 +91,7 @@ export type AppSettingsRow = {
   mollie_enabled: boolean;
   resend_api_key: string | null;
   ticket_email_from: string | null;
+  ticket_email_reply_to: string | null;
   email_enabled: boolean;
 };
 
@@ -105,6 +106,7 @@ export type PublicAppSettings = {
   email_enabled: boolean;
   email_key_hint: string | null;
   email_from: string | null;
+  email_reply_to: string | null;
   email_key_source: "settings" | "env" | null;
 };
 

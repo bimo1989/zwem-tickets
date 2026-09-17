@@ -133,6 +133,8 @@ export default function AdminSettingsPage() {
         Instellingen
       </h1>
 
+      <ScannerCodesSection />
+
       <MollieSection settings={settings} onChange={setSettings} />
 
       {/* Bank accounts */}
@@ -260,8 +262,6 @@ export default function AdminSettingsPage() {
       </section>
 
       <EmailSection settings={settings} onChange={setSettings} />
-
-      <ScannerCodesSection />
 
       {/* Remittance template */}
       <section className="mt-12">

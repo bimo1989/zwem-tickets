@@ -96,6 +96,8 @@ create table if not exists app_settings (
   -- TICKET_EMAIL_FROM environment variables when empty.
   resend_api_key text,
   ticket_email_from text,
+  -- Optional: where replies to a ticket mail should go (see migration 0012).
+  ticket_email_reply_to text,
   email_enabled boolean not null default true
 );
 insert into app_settings (id) values (true) on conflict (id) do nothing;

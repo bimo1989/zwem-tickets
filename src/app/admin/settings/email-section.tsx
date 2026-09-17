@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PublicAppSettings } from "@/lib/supabase";
+import ConfirmDeleteButton from "./confirm-delete-button";
 
 /**
  * Confirmation-mail configuration. Like the Mollie key, the Resend key is
@@ -16,6 +17,7 @@ export default function EmailSection({
 }) {
   const [keyInput, setKeyInput] = useState("");
   const [fromInput, setFromInput] = useState("");
+  const [replyToInput, setReplyToInput] = useState("");
   const [testTo, setTestTo] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -47,6 +49,7 @@ export default function EmailSection({
     const body: Record<string, unknown> = {};
     if (keyInput.trim()) body.resend_api_key = keyInput.trim();
     if (fromInput.trim()) body.ticket_email_from = fromInput.trim();
+    if (replyToInput.trim()) body.ticket_email_reply_to = replyToInput.trim();
 
     if (Object.keys(body).length === 0) {
       setSaving(false);
@@ -57,16 +60,13 @@ export default function EmailSection({
     if (data) {
       setKeyInput("");
       setFromInput("");
+      setReplyToInput("");
       setNotice("Opgeslagen. Stuur nu een testmail om te zien of het werkt.");
     }
     setSaving(false);
   }
 
   async function handleRemoveKey() {
-    const ok = window.confirm(
-      "De opgeslagen Resend-sleutel verwijderen? Er worden dan geen bevestigingsmails meer verstuurd."
-    );
-    if (!ok) return;
     setNotice(null);
     await patch({ resend_api_key: null });
   }
@@ -153,6 +153,14 @@ export default function EmailSection({
                   <code className="text-zinc-800 dark:text-zinc-200">
                     {settings.email_key_hint}
                   </code>
+                  {settings.email_reply_to && (
+                    <>
+                      <span className="text-zinc-500"> · antwoorden naar: </span>
+                      <code className="text-zinc-800 dark:text-zinc-200">
+                        {settings.email_reply_to}
+                      </code>
+                    </>
+                  )}
                   {settings.email_key_source === "env" && (
                     <span className="ml-2 text-xs text-zinc-500">
                       (uit de omgevingsvariabelen — wat je hier opslaat krijgt
@@ -161,12 +169,13 @@ export default function EmailSection({
                   )}
                 </div>
                 {settings.email_key_source === "settings" && (
-                  <button
-                    onClick={handleRemoveKey}
-                    className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-                  >
-                    Sleutel verwijderen
-                  </button>
+                  <ConfirmDeleteButton
+                    triggerLabel="Sleutel verwijderen"
+                    phrase="verwijder sleutel"
+                    confirmLabel="Definitief verwijderen"
+                    description="Dit wist de opgeslagen Resend-sleutel. Er worden dan geen bevestigingsmails meer verstuurd tot je een nieuwe sleutel invult."
+                    onConfirm={handleRemoveKey}
+                  />
                 )}
               </div>
             ) : (
@@ -208,8 +217,9 @@ export default function EmailSection({
                 />
                 <p className="text-xs text-zinc-500">
                   Het domein hierin moet in Resend geverifieerd zijn, anders
-                  weigert Resend de mail. Nog geen eigen domein? Gebruik
-                  voorlopig{" "}
+                  weigert Resend de mail. Een gratis mailadres van Gmail,
+                  Hotmail of Telenet kan hier dus niet: dat domein is niet van
+                  jou. Nog geen eigen domein geverifieerd? Gebruik voorlopig{" "}
                   <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">
                     onboarding@resend.dev
                   </code>{" "}
@@ -217,9 +227,30 @@ export default function EmailSection({
                   om te testen.
                 </p>
               </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Antwoorden naar (optioneel)
+                </label>
+                <input
+                  type="email"
+                  value={replyToInput}
+                  onChange={(e) => setReplyToInput(e.target.value)}
+                  placeholder={settings.email_reply_to ?? "jouwnaam@gmail.com"}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+                <p className="text-xs text-zinc-500">
+                  Hier mág wel een gewoon Gmail-adres staan. De mail vertrekt van
+                  de afzender hierboven, maar klikt een deelnemer op
+                  &quot;Beantwoorden&quot;, dan komt dat antwoord hier terecht.
+                  Laat je dit leeg, dan gaan antwoorden naar de afzender.
+                </p>
+              </div>
               <button
                 type="submit"
-                disabled={saving || (!keyInput.trim() && !fromInput.trim())}
+                disabled={
+                  saving ||
+                  (!keyInput.trim() && !fromInput.trim() && !replyToInput.trim())
+                }
                 className="h-11 self-start rounded-full bg-zinc-900 px-6 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
               >
                 {saving ? "Bezig..." : "Opslaan"}

@@ -53,6 +53,11 @@ const settingsSchema = z
         z.null(),
       ])
       .optional(),
+    // Where replies go. Plain address only — no display name, since mail
+    // clients show it as the recipient when someone hits reply.
+    ticket_email_reply_to: z
+      .union([z.string().trim().email("Vul een geldig e-mailadres in."), z.null()])
+      .optional(),
     ticket_email_from: z
       .union([
         z
@@ -88,6 +93,7 @@ async function buildPublicSettings(
     email_enabled: email.enabled,
     email_key_hint: email.apiKey ? maskResendKey(email.apiKey) : null,
     email_from: email.fromAddress,
+    email_reply_to: email.replyTo,
     email_key_source: email.source,
   };
 }
@@ -162,12 +168,13 @@ export async function PATCH(req: NextRequest) {
     if (
       error.message.includes("resend_api_key") ||
       error.message.includes("ticket_email_from") ||
+      error.message.includes("ticket_email_reply_to") ||
       error.message.includes("email_enabled")
     ) {
       return NextResponse.json(
         {
           error:
-            "De database kent de e-mailinstellingen nog niet. Run supabase/migrations/0011_email_settings.sql in de Supabase SQL Editor en probeer opnieuw.",
+            "De database kent deze e-mailinstellingen nog niet. Run supabase/migrations/0011_email_settings.sql en 0012_email_reply_to.sql in de Supabase SQL Editor en probeer opnieuw.",
         },
         { status: 409 }
       );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PublicAppSettings } from "@/lib/supabase";
+import ConfirmDeleteButton from "./confirm-delete-button";
 
 /**
  * Mollie configuration. The API key itself is write-only: it is stored
@@ -55,10 +56,6 @@ export default function MollieSection({
   }
 
   async function handleRemoveKey() {
-    const ok = window.confirm(
-      "De opgeslagen Mollie-sleutel verwijderen? Online betalen valt dan weg."
-    );
-    if (!ok) return;
     setCheckResult(null);
     await patch({ mollie_api_key: null });
   }
@@ -73,7 +70,7 @@ export default function MollieSection({
   const active = !!settings?.mollie_enabled && hasKey;
 
   return (
-    <section className="mt-8">
+    <section className="mt-12">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
           Online betalen (Mollie)
@@ -135,12 +132,13 @@ export default function MollieSection({
                   )}
                 </div>
                 {settings.mollie_key_source === "settings" && (
-                  <button
-                    onClick={handleRemoveKey}
-                    className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-                  >
-                    Sleutel verwijderen
-                  </button>
+                  <ConfirmDeleteButton
+                    triggerLabel="Sleutel verwijderen"
+                    phrase="verwijder sleutel"
+                    confirmLabel="Definitief verwijderen"
+                    description="Dit wist de opgeslagen Mollie-sleutel. Bezoekers kunnen dan enkel nog overschrijven met QR-code."
+                    onConfirm={handleRemoveKey}
+                  />
                 )}
               </div>
             ) : (

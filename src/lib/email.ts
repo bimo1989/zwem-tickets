@@ -6,6 +6,8 @@ import { getSupabaseAdmin, type EventRow, type OrderRow } from "./supabase";
 export type EmailConfig = {
   apiKey: string | null;
   fromAddress: string | null;
+  /** Optional: where a buyer's reply should land, if not the from-address. */
+  replyTo: string | null;
   /** Whether the admin wants confirmation mails sent at all. */
   enabled: boolean;
   source: "settings" | "env" | null;
@@ -29,7 +31,7 @@ export async function getEmailConfig(client?: SupabaseClient): Promise<EmailConf
   // environment instead of silently dropping mails.
   const { data } = await supabase
     .from("app_settings")
-    .select("resend_api_key, ticket_email_from, email_enabled")
+    .select("resend_api_key, ticket_email_from, ticket_email_reply_to, email_enabled")
     .eq("id", true)
     .maybeSingle();
 
@@ -41,6 +43,7 @@ export async function getEmailConfig(client?: SupabaseClient): Promise<EmailConf
   return {
     apiKey: settingsKey ?? envKey,
     fromAddress: settingsFrom ?? envFrom,
+    replyTo: data?.ticket_email_reply_to?.trim() || null,
     enabled: data ? data.email_enabled : true,
     source: settingsKey ? "settings" : envKey ? "env" : null,
   };
@@ -57,7 +60,7 @@ export async function sendTicketEmail(
   order: OrderRow,
   client?: SupabaseClient
 ) {
-  const { apiKey, fromAddress, enabled } = await getEmailConfig(client);
+  const { apiKey, fromAddress, replyTo, enabled } = await getEmailConfig(client);
 
   if (!enabled) {
     console.warn("Confirmation mails are switched off — skipping.");
@@ -108,6 +111,7 @@ export async function sendTicketEmail(
   await resend.emails.send({
     from: fromAddress,
     to: order.buyer_email,
+    ...(replyTo ? { replyTo } : {}),
     subject: `Ticket bevestigd: ${event.title}`,
     html,
     attachments: [
@@ -126,7 +130,7 @@ export async function sendTicketEmail(
  * real buyer depends on it.
  */
 export async function sendTestEmail(to: string, client?: SupabaseClient) {
-  const { apiKey, fromAddress } = await getEmailConfig(client);
+  const { apiKey, fromAddress, replyTo } = await getEmailConfig(client);
 
   if (!apiKey) throw new Error("Geen Resend API-sleutel ingesteld.");
   if (!fromAddress) throw new Error("Geen afzender-adres ingesteld.");
@@ -135,6 +139,7 @@ export async function sendTestEmail(to: string, client?: SupabaseClient) {
   const { error } = await resend.emails.send({
     from: fromAddress,
     to,
+    ...(replyTo ? { replyTo } : {}),
     subject: "Testmail vanuit de ticketsite",
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
@@ -143,7 +148,11 @@ export async function sendTestEmail(to: string, client?: SupabaseClient) {
           Deze testmail komt van de ticketsite van MC Attawassul. Krijg je hem,
           dan worden de bevestigingsmails naar kopers ook verstuurd.
         </p>
-        <p style="font-size: 12px; color: #999;">Afzender: ${escapeHtml(fromAddress)}</p>
+        <p style="font-size: 12px; color: #999;">
+          Afzender: ${escapeHtml(fromAddress)}${
+            replyTo ? ` &middot; antwoorden gaan naar ${escapeHtml(replyTo)}` : ""
+          }
+        </p>
       </div>
     `,
   });

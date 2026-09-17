@@ -81,7 +81,7 @@ export default function ScannerCodesSection() {
   }
 
   return (
-    <section className="mt-12">
+    <section className="mt-8">
       <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
         Scan-codes voor vrijwilligers
       </h2>

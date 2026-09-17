@@ -19,7 +19,7 @@ nodig tegen een Google Formulier.
      niet uitvoerde, op nummer. De Mollie-instellingen zitten in
      `0009_mollie_settings.sql`, de scan-codes voor vrijwilligers in
      `0010_scanner_codes.sql`, de e-mailinstellingen in
-     `0011_email_settings.sql`.
+     `0011_email_settings.sql` en `0012_email_reply_to.sql`.
    - Ga naar *Project Settings → API* en noteer:
      - `Project URL` → wordt `SUPABASE_URL`
      - `service_role` key (niet de `anon` key!) → wordt `SUPABASE_SERVICE_ROLE_KEY`
@@ -47,8 +47,15 @@ nodig tegen een Google Formulier.
      in één keer dat de sleutel, de afzender én je domeinverificatie kloppen.
      Met de schakelaar zet je de mails aan of uit zonder de sleutel te wissen.
    - Het domein in het afzender-adres moet in Resend geverifieerd zijn, anders
-     weigert Resend te versturen. Nog geen eigen domein? `onboarding@resend.dev`
-     werkt om te testen, maar mailt enkel naar je eigen Resend-account-adres.
+     weigert Resend te versturen. Een gratis adres bij Gmail of Hotmail kan hier
+     dus niet: dat domein is niet van jou, en Google weigert mail die beweert van
+     `@gmail.com` te komen maar elders verstuurd is. Nog geen eigen domein?
+     `onboarding@resend.dev` werkt om te testen, maar mailt enkel naar je eigen
+     Resend-account-adres.
+   - Wil je de antwoorden toch in je gewone mailbox? Vul dan **"Antwoorden naar"**
+     in bij de instellingen. De mail vertrekt van je geverifieerde adres, maar
+     klikt een deelnemer op "Beantwoorden", dan komt dat daar terecht — een
+     Gmail-adres mag daar wel.
 
 4. **Vercel** (hosting, gratis tier) — https://vercel.com
    - Log in met GitHub.
