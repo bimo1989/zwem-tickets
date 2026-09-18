@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ReminderPanel from "./reminder-panel";
 import type { BankAccountRow, EventPriceTierRow, EventRow } from "@/lib/supabase";
 
 type EventWithTiers = EventRow & { event_price_tiers: EventPriceTierRow[] };
@@ -568,6 +569,7 @@ export default function AdminEventsPage() {
                 >
                   Bewerk
                 </button>
+                <ReminderPanel eventId={ev.id} eventTitle={ev.title} />
                 <button
                   onClick={() => handleDuplicate(ev)}
                   className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"

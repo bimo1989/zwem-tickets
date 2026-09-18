@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/orders")
@@ -55,6 +56,21 @@ export default function AdminPage() {
       revenueCents: paid.reduce((sum, o) => sum + o.amount_cents, 0),
     };
   }, [filteredOrders]);
+
+  async function handleResendTicket(orderId: string) {
+    setResendingId(orderId);
+    const res = await fetch(`/api/admin/orders/${orderId}/resend-ticket`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setResendingId(null);
+
+    if (!res.ok) {
+      alert(data.error ?? "Kon de mail niet versturen.");
+      return;
+    }
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? data.order : o)));
+  }
 
   async function handleMarkPaid(orderId: string) {
     const res = await fetch(`/api/admin/orders/${orderId}/mark-paid`, {
@@ -220,6 +236,7 @@ export default function AdminPage() {
                 <th className="px-4 py-2">Methode</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2">Ingecheckt</th>
+                <th className="px-4 py-2">Mail</th>
                 <th className="px-4 py-2">Besteld op</th>
                 <th className="px-4 py-2"></th>
               </tr>
@@ -245,6 +262,9 @@ export default function AdminPage() {
                   <td className="px-4 py-2 text-zinc-500">
                     {o.status === "paid" ? `${o.checked_in_count} / ${o.quantity}` : "—"}
                   </td>
+                  <td className="px-4 py-2">
+                    <MailStatus order={o} />
+                  </td>
                   <td className="px-4 py-2 text-zinc-500">
                     {new Date(o.created_at).toLocaleString("nl-BE")}
                   </td>
@@ -256,6 +276,19 @@ export default function AdminPage() {
                           className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
                         >
                           Markeer betaald
+                        </button>
+                      )}
+                      {o.status === "paid" && (
+                        <button
+                          onClick={() => handleResendTicket(o.id)}
+                          disabled={resendingId === o.id}
+                          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          {resendingId === o.id
+                            ? "Versturen..."
+                            : o.ticket_email_sent_at
+                              ? "Mail opnieuw sturen"
+                              : "Mail versturen"}
                         </button>
                       )}
                       {o.status !== "paid" &&
@@ -278,7 +311,7 @@ export default function AdminPage() {
               ))}
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-6 text-center text-zinc-500">
+                  <td colSpan={11} className="px-4 py-6 text-center text-zinc-500">
                     Geen bestellingen gevonden.
                   </td>
                 </tr>
@@ -288,6 +321,32 @@ export default function AdminPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+/**
+ * Whether the confirmation mail actually went out. Worth showing: Resend's
+ * free tier stops at 100 mails a day, so a busy day can leave a few buyers
+ * without one while their ticket is perfectly valid.
+ */
+function MailStatus({ order }: { order: OrderRow }) {
+  if (order.status !== "paid") {
+    return <span className="text-zinc-400">—</span>;
+  }
+  if (order.ticket_email_sent_at) {
+    return (
+      <span
+        title={new Date(order.ticket_email_sent_at).toLocaleString("nl-BE")}
+        className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+      >
+        Verstuurd
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+      Niet verstuurd
+    </span>
   );
 }
 

@@ -52,6 +52,8 @@ export type OrderRow = {
   ticket_code: string;
   created_at: string;
   paid_at: string | null;
+  ticket_email_sent_at: string | null;
+  reminder_sent_at: string | null;
 };
 
 export type EventPriceTierRow = {

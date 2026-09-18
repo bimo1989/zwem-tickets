@@ -108,7 +108,7 @@ export async function sendTicketEmail(
     </div>
   `;
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: fromAddress,
     to: order.buyer_email,
     ...(replyTo ? { replyTo } : {}),
@@ -122,6 +122,92 @@ export async function sendTicketEmail(
       },
     ],
   });
+
+  // The SDK reports failures in the response rather than by throwing.
+  if (error) {
+    throw new Error(error.message ?? "Resend weigerde de mail.");
+  }
+
+  // Recorded so /admin can show who is still missing their confirmation —
+  // Resend's free tier caps at 100 mails a day, which a busy day can hit.
+  await (client ?? getSupabaseAdmin())
+    .from("orders")
+    .update({ ticket_email_sent_at: new Date().toISOString() })
+    .eq("id", order.id);
+}
+
+/**
+ * A short reminder a few days before the event, sent to everyone with a paid
+ * ticket. `note` is an optional line the admin adds (what to bring, a change
+ * of hall, ...).
+ */
+export async function sendReminderEmail(
+  event: EventRow,
+  order: OrderRow,
+  note: string | null,
+  client?: SupabaseClient
+) {
+  const { apiKey, fromAddress, replyTo, enabled } = await getEmailConfig(client);
+
+  if (!enabled) throw new Error("Mails staan uit in de instellingen.");
+  if (!apiKey || !fromAddress) {
+    throw new Error("Geen Resend-sleutel of afzender ingesteld.");
+  }
+
+  const resend = new Resend(apiKey);
+  const ticketUrl = process.env.APP_URL
+    ? `${process.env.APP_URL}/ticket/${order.id}`
+    : null;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      <h2>Herinnering: ${escapeHtml(event.title)}</h2>
+      <p>Beste ${escapeHtml(order.buyer_name)},</p>
+      <p>Binnenkort is het zover. Dit zijn de gegevens:</p>
+      <p>
+        📅 ${event.event_date} &nbsp; 🕕 ${event.start_time.slice(0, 5)} - ${event.end_time.slice(0, 5)}<br/>
+        📍 ${escapeHtml(event.location ?? "")}
+      </p>
+      <p>Jouw inschrijving: <strong>${order.quantity} ticket(s)</strong>.</p>
+      ${
+        note
+          ? `<div style="border-left: 3px solid #059669; padding-left: 12px; margin: 20px 0;">
+               ${escapeHtml(note).replace(/\n/g, "<br/>")}
+             </div>`
+          : ""
+      }
+      ${
+        ticketUrl
+          ? `<p style="text-align:center; margin: 24px 0;">
+               <a href="${ticketUrl}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;">
+                 Toon mijn ticket
+               </a>
+             </p>
+             <p style="text-align:center; font-size: 12px;">
+               <a href="${ticketUrl.replace(`/ticket/${order.id}`, `/api/tickets/${order.id}/pdf`)}" style="color:#059669;">Bewaren als PDF</a>
+             </p>`
+          : ""
+      }
+      <p style="font-size: 12px; color: #999;">Ticketcode: ${order.ticket_code}</p>
+    </div>
+  `;
+
+  const { error } = await resend.emails.send({
+    from: fromAddress,
+    to: order.buyer_email,
+    ...(replyTo ? { replyTo } : {}),
+    subject: `Herinnering: ${event.title}`,
+    html,
+  });
+
+  if (error) {
+    throw new Error(error.message ?? "Resend weigerde de mail.");
+  }
+
+  await (client ?? getSupabaseAdmin())
+    .from("orders")
+    .update({ reminder_sent_at: new Date().toISOString() })
+    .eq("id", order.id);
 }
 
 /**

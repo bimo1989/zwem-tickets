@@ -56,7 +56,9 @@ create table if not exists orders (
   checked_in_count integer not null default 0,
   ticket_code text not null unique,       -- shown as QR code on the ticket
   created_at timestamptz not null default now(),
-  paid_at timestamptz
+  paid_at timestamptz,
+  ticket_email_sent_at timestamptz,       -- when the confirmation mail went out (null = never)
+  reminder_sent_at timestamptz            -- when the reminder for this event went out
 );
 
 -- Waitlist sign-ups for a sold-out event (only offered when

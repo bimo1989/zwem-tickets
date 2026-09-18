@@ -19,7 +19,8 @@ nodig tegen een Google Formulier.
      niet uitvoerde, op nummer. De Mollie-instellingen zitten in
      `0009_mollie_settings.sql`, de scan-codes voor vrijwilligers in
      `0010_scanner_codes.sql`, de e-mailinstellingen in
-     `0011_email_settings.sql` en `0012_email_reply_to.sql`.
+     `0011_email_settings.sql` en `0012_email_reply_to.sql`, en het bijhouden
+     van verstuurde mails in `0013_mail_tracking.sql`.
    - Ga naar *Project Settings → API* en noteer:
      - `Project URL` → wordt `SUPABASE_URL`
      - `service_role` key (niet de `anon` key!) → wordt `SUPABASE_SERVICE_ROLE_KEY`
@@ -143,11 +144,14 @@ niet kwijt te raken).
   **"WhatsApp sturen"**-knop (opent jouw eigen WhatsApp met een kant-en-klaar
   bericht naar de koper, bv. om te melden dat de betaling nog niet in orde
   is — geen WhatsApp-account of API nodig), en zicht op wie al is ingecheckt
-  (login met `ADMIN_PASSWORD`)
+  (login met `ADMIN_PASSWORD`). De kolom **Mail** toont per bestelling of de
+  bevestiging effectief vertrok, met een knop om ze opnieuw te versturen
 - `/admin/events` — evenementen aanmaken, **bewerken** (alle velden, incl.
   prijscategorieën), dupliceren als sjabloon, publiceren/verbergen,
   verwijderen (typ "verwijder evenement" ter bevestiging), en per evenement
-  een bankrekening en inschrijvingsdeadline instellen
+  een bankrekening en inschrijvingsdeadline instellen. Met **"Herinnering
+  sturen"** mail je alle betaalde deelnemers van dat evenement, met een
+  optioneel eigen bericht erbij
 - `/admin/waitlist` — wachtlijst-aanmeldingen per evenement bekijken en
   omzetten naar een echte bestelling (overschrijving) zodra er een plaats
   vrijkomt, of verwijderen
@@ -208,3 +212,15 @@ Unregister-ScheduledTask -TaskName "ZwemTicketsKeepAlive" -Confirm:$false
 - Automatische e-mail/WhatsApp-melding naar wachtlijst-aanmeldingen zodra ze
   worden omgezet (nu enkel handmatig via de bestaande WhatsApp-knop in
   `/admin`)
+
+### Herinneringsmails
+
+Klik bij een evenement in `/admin/events` op **"Herinnering sturen"**. Je ziet
+hoeveel deelnemers een betaald ticket hebben, kan er een eigen boodschap bij
+zetten (bv. wat ze moeten meebrengen) en verstuurt in één keer.
+
+Alleen deelnemers die nog géén herinnering kregen worden gemaild. Dat maakt de
+actie herhaalbaar: loop je tegen de daglimiet van Resend aan (100 mails per dag
+op het gratis plan), dan stuur je de volgende dag gewoon opnieuw en gaan enkel
+de overblijvers eruit — niemand krijgt twee keer dezelfde mail. Wil je toch
+iedereen opnieuw bereiken, vink dan "Ook naar wie al een herinnering kreeg" aan.
