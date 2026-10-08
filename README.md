@@ -224,3 +224,21 @@ actie herhaalbaar: loop je tegen de daglimiet van Resend aan (100 mails per dag
 op het gratis plan), dan stuur je de volgende dag gewoon opnieuw en gaan enkel
 de overblijvers eruit — niemand krijgt twee keer dezelfde mail. Wil je toch
 iedereen opnieuw bereiken, vink dan "Ook naar wie al een herinnering kreeg" aan.
+
+### Reglement per evenement
+
+Klik bij een evenement in `/admin/events` op **"Reglement"**. Je kan daar drie
+dingen instellen, elk optioneel:
+
+- **Inleidende tekst** — een korte toelichting boven de vinkjes.
+- **Document of foto** — een PDF of afbeelding van het volledige reglement. Die
+  wordt geüpload naar Supabase Storage en op de evenementpagina getoond (een
+  foto als voorbeeld, een PDF als link).
+- **Vinkjes** — zoveel als je wil, elk met je eigen tekst. Een bezoeker moet ze
+  **allemaal** aanzetten voor hij kan bestellen, en dat wordt ook server-side
+  gecontroleerd, dus een aangepast formulier komt er niet langs.
+
+Wat iemand aanvinkte, wordt bij de bestelling zelf bewaard (`orders.agreed_items`)
+in plaats van alleen een verwijzing. Pas je later een tekst aan of verwijder je
+een vinkje, dan blijft bij elke oude bestelling staan waar die persoon destijds
+mee akkoord ging.

@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { getSupabaseAdmin, type EventRow, type EventPriceTierRow } from "@/lib/supabase";
+import {
+  getSupabaseAdmin,
+  type EventRow,
+  type EventPriceTierRow,
+  type EventAgreementRow,
+} from "@/lib/supabase";
 import { formatEuroCents, isMollieAvailable } from "@/lib/mollie";
 import { getEventTheme, EventThemeIcon } from "@/lib/eventTheme";
 import BuyForm from "./buy-form";
@@ -21,10 +26,16 @@ async function getEventWithAvailability(id: string) {
   if (error) throw error;
   if (!event) return null;
 
-  const [{ data: sale }, { data: priceTiers }] = await Promise.all([
+  const [{ data: sale }, { data: priceTiers }, { data: agreements }] = await Promise.all([
     supabase.from("event_sales").select("tickets_paid").eq("event_id", id).maybeSingle(),
     supabase
       .from("event_price_tiers")
+      .select("*")
+      .eq("event_id", id)
+      .order("display_order", { ascending: true }),
+    // Errors here (table not migrated yet) just mean no rules to agree to.
+    supabase
+      .from("event_agreements")
       .select("*")
       .eq("event_id", id)
       .order("display_order", { ascending: true }),
@@ -34,6 +45,7 @@ async function getEventWithAvailability(id: string) {
     event: event as EventRow,
     ticketsSold: sale?.tickets_paid ?? 0,
     priceTiers: (priceTiers ?? []) as EventPriceTierRow[],
+    agreements: (agreements ?? []) as EventAgreementRow[],
   };
 }
 
@@ -47,7 +59,7 @@ export default async function EventPage({
 
   if (!result) notFound();
 
-  const { event, ticketsSold, priceTiers } = result;
+  const { event, ticketsSold, priceTiers, agreements } = result;
   const remaining = Math.max(event.capacity - ticketsSold, 0);
   const deadlinePassed =
     !!event.registration_deadline && new Date(event.registration_deadline) < new Date();
@@ -140,6 +152,9 @@ export default async function EventPage({
               maxQuantity={Math.min(remaining, 10)}
               bankTransferAvailable={event.bank_account_id != null}
               mollieAvailable={await isMollieAvailable()}
+              rulesText={event.rules_text}
+              rulesFileUrl={event.rules_file_url}
+              agreements={agreements.map((a) => ({ id: a.id, text: a.text }))}
             />
           ) : event.waitlist_enabled ? (
             <WaitlistForm eventId={event.id} />

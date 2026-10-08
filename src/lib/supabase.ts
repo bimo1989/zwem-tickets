@@ -31,6 +31,8 @@ export type EventRow = {
   registration_deadline: string | null;
   bank_account_id: string | null;
   waitlist_enabled: boolean;
+  rules_text: string | null;
+  rules_file_url: string | null;
   is_published: boolean;
   created_at: string;
 };
@@ -54,6 +56,17 @@ export type OrderRow = {
   paid_at: string | null;
   ticket_email_sent_at: string | null;
   reminder_sent_at: string | null;
+  agreed_at: string | null;
+  /** Snapshot of the exact texts this buyer accepted, kept as proof. */
+  agreed_items: string[] | null;
+};
+
+export type EventAgreementRow = {
+  id: string;
+  event_id: string;
+  text: string;
+  display_order: number;
+  created_at: string;
 };
 
 export type EventPriceTierRow = {

@@ -19,6 +19,8 @@ const updateSchema = z.object({
   registration_deadline: z.string().trim().nullable().optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   waitlist_enabled: z.boolean().optional(),
+  rules_text: z.string().trim().max(5000).nullable().optional(),
+  rules_file_url: z.string().trim().url().max(1000).nullable().optional(),
   is_published: z.boolean().optional(),
 });
 

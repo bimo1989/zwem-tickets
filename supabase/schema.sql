@@ -25,6 +25,8 @@ create table if not exists events (
   registration_deadline timestamptz,     -- optional; after this moment, no new orders even if not sold out
   bank_account_id uuid references bank_accounts(id), -- where a bank-transfer payment should land; null = bank transfer unavailable for this event
   waitlist_enabled boolean not null default false, -- offer a waitlist sign-up once sold out
+  rules_text text,                       -- optional rules shown before ordering
+  rules_file_url text,                   -- optional uploaded PDF/photo of the rules
   is_published boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -58,7 +60,18 @@ create table if not exists orders (
   created_at timestamptz not null default now(),
   paid_at timestamptz,
   ticket_email_sent_at timestamptz,       -- when the confirmation mail went out (null = never)
-  reminder_sent_at timestamptz            -- when the reminder for this event went out
+  reminder_sent_at timestamptz,           -- when the reminder for this event went out
+  agreed_at timestamptz,                  -- when the buyer accepted the rules
+  agreed_items jsonb                      -- snapshot of the exact texts they accepted
+);
+
+-- The checkboxes a buyer must tick for an event (see migration 0014).
+create table if not exists event_agreements (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references events(id) on delete cascade,
+  text text not null,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now()
 );
 
 -- Waitlist sign-ups for a sold-out event (only offered when
@@ -126,6 +139,14 @@ alter table event_price_tiers enable row level security;
 alter table orders enable row level security;
 alter table app_settings enable row level security;
 alter table waitlist_entries enable row level security;
+alter table event_agreements enable row level security;
+
+create index if not exists event_agreements_event_id_idx on event_agreements(event_id);
+
+-- Public bucket for an event's rules document (PDF or photo).
+insert into storage.buckets (id, name, public)
+values ('event-rules', 'event-rules', true)
+on conflict (id) do nothing;
 
 -- Scan-only access codes for volunteers (see migration 0010). Handed out from
 -- /admin/settings; a holder can only reach the check-in scanner.

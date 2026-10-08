@@ -13,6 +13,8 @@ const checkoutSchema = z.object({
   buyerPhone: z.string().trim().min(6).max(30),
   quantity: z.coerce.number().int().min(1).max(10),
   paymentMethod: z.enum(["mollie", "bank_transfer"]).optional().default("mollie"),
+  /** Ids of the rule checkboxes the buyer ticked. */
+  agreedIds: z.array(z.string().uuid()).optional().default([]),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,8 +22,16 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
-  const { eventId, priceTierId, buyerName, buyerEmail, buyerPhone, quantity, paymentMethod } =
-    parsed.data;
+  const {
+    eventId,
+    priceTierId,
+    buyerName,
+    buyerEmail,
+    buyerPhone,
+    quantity,
+    paymentMethod,
+    agreedIds,
+  } = parsed.data;
 
   const supabase = getSupabaseAdmin();
 
@@ -57,6 +67,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: `Nog maar ${Math.max(remaining, 0)} plaatsen beschikbaar.` },
       { status: 409 }
+    );
+  }
+
+  // Every rule checkbox this event has must be ticked. Checked server-side so
+  // a tampered form can't skip them, and snapshotted onto the order below so
+  // the record survives a later edit of the texts.
+  const { data: agreements } = await supabase
+    .from("event_agreements")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("display_order", { ascending: true });
+
+  const required = agreements ?? [];
+  const accepted = required.filter((a) => agreedIds.includes(a.id));
+
+  if (accepted.length !== required.length) {
+    return NextResponse.json(
+      { error: "Je moet akkoord gaan met alle punten van het reglement." },
+      { status: 400 }
     );
   }
 
@@ -99,6 +128,12 @@ export async function POST(req: NextRequest) {
       status: "open",
       payment_method: paymentMethod,
       ticket_code: ticketCode,
+      ...(required.length > 0
+        ? {
+            agreed_at: new Date().toISOString(),
+            agreed_items: accepted.map((a) => a.text),
+          }
+        : {}),
     })
     .select()
     .single();
