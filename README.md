@@ -242,3 +242,12 @@ Wat iemand aanvinkte, wordt bij de bestelling zelf bewaard (`orders.agreed_items
 in plaats van alleen een verwijzing. Pas je later een tekst aan of verwijder je
 een vinkje, dan blijft bij elke oude bestelling staan waar die persoon destijds
 mee akkoord ging.
+
+Dupliceer je een evenement, dan gaat het volledige reglement mee: de tekst, het
+document en alle vinkjes. Het kopiëren gebeurt server-side bij het aanmaken, dus
+de vinkjes van het origineel blijven ongemoeid — het nieuwe evenement krijgt een
+eigen set die je los kan aanpassen.
+
+Let op dat je op de knop "Reglement" van het **juiste** evenement klikt: elke rij
+in `/admin/events` heeft er een, en het paneel zet de naam van dat evenement
+bovenaan.

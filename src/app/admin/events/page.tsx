@@ -23,6 +23,8 @@ type FormState = {
   bank_account_id: string;
   waitlist_enabled: boolean;
   is_published: boolean;
+  /** Set when duplicating: the event whose rules should be copied along. */
+  duplicateFromId: string | null;
 };
 
 const emptyForm: FormState = {
@@ -38,6 +40,7 @@ const emptyForm: FormState = {
   bank_account_id: "",
   waitlist_enabled: false,
   is_published: true,
+  duplicateFromId: null,
 };
 
 // Formats an ISO timestamp as a value the <input type="datetime-local">
@@ -145,7 +148,13 @@ export default function AdminEventsPage() {
       : await fetch("/api/admin/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            // Only on create, and only when this came from "Dupliceer".
+            ...(form.duplicateFromId
+              ? { duplicate_from_event_id: form.duplicateFromId }
+              : {}),
+          }),
         });
 
     const data = await res.json();
@@ -153,6 +162,10 @@ export default function AdminEventsPage() {
       setError(data.error ?? "Kon evenement niet opslaan.");
       setSubmitting(false);
       return;
+    }
+    if (data.rulesWarning) {
+      // The event was created; only copying the rules fell over.
+      alert(`${data.rulesWarning} Vul het reglement handmatig aan bij het nieuwe evenement.`);
     }
 
     setForm(emptyForm);
@@ -236,6 +249,8 @@ export default function AdminEventsPage() {
       bank_account_id: ev.bank_account_id ?? "",
       waitlist_enabled: false,
       is_published: false,
+      // Carries the rules (text, document and checkboxes) over to the copy.
+      duplicateFromId: ev.id,
     });
     setEditingEventId(null);
     setShowForm(true);
@@ -264,6 +279,7 @@ export default function AdminEventsPage() {
       bank_account_id: ev.bank_account_id ?? "",
       waitlist_enabled: ev.waitlist_enabled,
       is_published: ev.is_published,
+      duplicateFromId: null,
     });
     setEditingEventId(ev.id);
     setShowForm(true);
@@ -308,6 +324,12 @@ export default function AdminEventsPage() {
           {editingEventId && (
             <p className="rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
               Je past een bestaand evenement aan.
+            </p>
+          )}
+          {form.duplicateFromId && (
+            <p className="rounded-md bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+              Kopie van een bestaand evenement. Het reglement (tekst, document en
+              vinkjes) wordt mee overgenomen.
             </p>
           )}
           <Field label="Titel">

@@ -1,6 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin, type EventRow } from "@/lib/supabase";
+
+/**
+ * Copies an event's rules onto a freshly duplicated one: the intro text, the
+ * uploaded document (the same file, reused — it isn't edited per event) and a
+ * fresh copy of every checkbox.
+ */
+async function copyRules(
+  supabase: SupabaseClient,
+  sourceEventId: string,
+  targetEventId: string
+): Promise<{ event: EventRow | null; warning?: string }> {
+  const { data: source, error: sourceError } = await supabase
+    .from("events")
+    .select("rules_text, rules_file_url")
+    .eq("id", sourceEventId)
+    .maybeSingle();
+
+  if (sourceError || !source) {
+    return { event: null, warning: "Het reglement kon niet gekopieerd worden." };
+  }
+
+  const { data: updated } = await supabase
+    .from("events")
+    .update({
+      rules_text: source.rules_text,
+      rules_file_url: source.rules_file_url,
+    })
+    .eq("id", targetEventId)
+    .select()
+    .single();
+
+  const { data: agreements } = await supabase
+    .from("event_agreements")
+    .select("text, display_order")
+    .eq("event_id", sourceEventId)
+    .order("display_order", { ascending: true });
+
+  if (agreements && agreements.length > 0) {
+    const { error: insertError } = await supabase.from("event_agreements").insert(
+      agreements.map((a) => ({
+        event_id: targetEventId,
+        text: a.text,
+        display_order: a.display_order,
+      }))
+    );
+
+    if (insertError) {
+      return {
+        event: (updated as EventRow) ?? null,
+        warning: "De vinkjes van het reglement konden niet gekopieerd worden.",
+      };
+    }
+  }
+
+  return { event: (updated as EventRow) ?? null };
+}
 
 const priceTierSchema = z.object({
   label: z.string().trim().min(1).max(50),
@@ -20,6 +77,13 @@ const eventSchema = z.object({
   bank_account_id: z.string().uuid().nullable().optional(),
   waitlist_enabled: z.boolean().optional(),
   is_published: z.boolean().optional(),
+  /**
+   * Set when the admin duplicates an event: the rules (text, document and
+   * checkboxes) are copied from that event onto the new one. Copied here on
+   * the server rather than carried through the form, because the checkboxes
+   * live in their own table.
+   */
+  duplicate_from_event_id: z.string().uuid().optional(),
 });
 
 export async function GET() {
@@ -42,7 +106,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { description, location, price_tiers, registration_deadline, ...rest } = parsed.data;
+  const {
+    description,
+    location,
+    price_tiers,
+    registration_deadline,
+    duplicate_from_event_id: duplicateFromId,
+    ...rest
+  } = parsed.data;
   const supabase = getSupabaseAdmin();
   const lowestPriceCents = Math.min(...price_tiers.map((t) => t.price_cents));
 
@@ -79,6 +150,13 @@ export async function POST(req: NextRequest) {
     // Roll back the event so we don't leave a priceless orphan behind.
     await supabase.from("events").delete().eq("id", event.id);
     return NextResponse.json({ error: tiersError.message }, { status: 500 });
+  }
+
+  if (duplicateFromId) {
+    const copied = await copyRules(supabase, duplicateFromId, event.id);
+    // The event itself is fine without them, so a failure here is reported
+    // alongside the new event instead of undoing the whole thing.
+    return NextResponse.json({ event: copied.event ?? event, rulesWarning: copied.warning });
   }
 
   return NextResponse.json({ event });
