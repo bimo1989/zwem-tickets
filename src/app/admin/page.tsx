@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [selectedEventId, setSelectedEventId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/orders")
@@ -56,6 +57,20 @@ export default function AdminPage() {
       revenueCents: paid.reduce((sum, o) => sum + o.amount_cents, 0),
     };
   }, [filteredOrders]);
+
+  async function handleCancel(orderId: string) {
+    const res = await fetch(`/api/admin/orders/${orderId}/cancel`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setConfirmingCancelId(null);
+
+    if (!res.ok) {
+      alert(data.error ?? "Kon de bestelling niet annuleren.");
+      return;
+    }
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? data.order : o)));
+  }
 
   async function handleResendTicket(orderId: string) {
     setResendingId(orderId);
@@ -270,7 +285,7 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {o.status === "open" && (
+                      {o.status !== "paid" && (
                         <button
                           onClick={() => handleMarkPaid(o.id)}
                           className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
@@ -278,6 +293,33 @@ export default function AdminPage() {
                           Markeer betaald
                         </button>
                       )}
+                      {o.status === "open" &&
+                        (confirmingCancelId === o.id ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-md border border-red-300 px-2 py-1 text-xs dark:border-red-800">
+                            <span className="text-red-700 dark:text-red-400">
+                              Plaats vrijgeven?
+                            </span>
+                            <button
+                              onClick={() => handleCancel(o.id)}
+                              className="font-medium text-red-700 underline dark:text-red-400"
+                            >
+                              Ja, annuleer
+                            </button>
+                            <button
+                              onClick={() => setConfirmingCancelId(null)}
+                              className="text-zinc-500 underline"
+                            >
+                              Nee
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmingCancelId(o.id)}
+                            className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                          >
+                            Annuleer
+                          </button>
+                        ))}
                       {o.status === "paid" && (
                         <button
                           onClick={() => handleResendTicket(o.id)}

@@ -145,7 +145,11 @@ niet kwijt te raken).
   bericht naar de koper, bv. om te melden dat de betaling nog niet in orde
   is — geen WhatsApp-account of API nodig), en zicht op wie al is ingecheckt
   (login met `ADMIN_PASSWORD`). De kolom **Mail** toont per bestelling of de
-  bevestiging effectief vertrok, met een knop om ze opnieuw te versturen
+  bevestiging effectief vertrok, met een knop om ze opnieuw te versturen. Met
+  **"Annuleer"** zet je een onbetaalde bestelling op geannuleerd, waardoor de
+  plaats weer vrijkomt — handig voor een overschrijving die nooit betaald
+  wordt. De bestelling blijft bestaan, dus komt het geld later alsnog binnen,
+  dan werkt "Markeer betaald" nog gewoon
 - `/admin/events` — evenementen aanmaken, **bewerken** (alle velden, incl.
   prijscategorieën), dupliceren als sjabloon, publiceren/verbergen,
   verwijderen (typ "verwijder evenement" ter bevestiging), en per evenement
