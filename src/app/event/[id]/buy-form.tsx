@@ -32,8 +32,10 @@ export default function BuyForm({
   const [phone, setPhone] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [priceTierId, setPriceTierId] = useState(priceTiers[0]?.id ?? "");
+  // Bank transfer is preselected whenever it's available, also when online
+  // payment is offered alongside it.
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
-    mollieAvailable ? "mollie" : "bank_transfer"
+    bankTransferAvailable ? "bank_transfer" : "mollie"
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

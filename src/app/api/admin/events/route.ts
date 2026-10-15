@@ -76,6 +76,7 @@ const eventSchema = z.object({
   registration_deadline: z.string().trim().nullable().optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   waitlist_enabled: z.boolean().optional(),
+  online_payment_enabled: z.boolean().optional(),
   is_published: z.boolean().optional(),
   /**
    * Set when the admin duplicates an event: the rules (text, document and

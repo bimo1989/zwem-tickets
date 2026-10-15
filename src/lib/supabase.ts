@@ -31,6 +31,8 @@ export type EventRow = {
   registration_deadline: string | null;
   bank_account_id: string | null;
   waitlist_enabled: boolean;
+  /** Offer Bancontact and the other Mollie methods for this event. */
+  online_payment_enabled: boolean;
   rules_text: string | null;
   rules_file_url: string | null;
   is_published: boolean;

@@ -151,7 +151,11 @@ export default async function EventPage({
               }))}
               maxQuantity={Math.min(remaining, 10)}
               bankTransferAvailable={event.bank_account_id != null}
-              mollieAvailable={await isMollieAvailable()}
+              // Online payment needs both a working Mollie setup and this
+              // event opting in; bank transfer is the standing default.
+              mollieAvailable={
+                event.online_payment_enabled && (await isMollieAvailable())
+              }
               rulesText={event.rules_text}
               rulesFileUrl={event.rules_file_url}
               agreements={agreements.map((a) => ({ id: a.id, text: a.text }))}

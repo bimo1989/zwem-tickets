@@ -25,6 +25,7 @@ create table if not exists events (
   registration_deadline timestamptz,     -- optional; after this moment, no new orders even if not sold out
   bank_account_id uuid references bank_accounts(id), -- where a bank-transfer payment should land; null = bank transfer unavailable for this event
   waitlist_enabled boolean not null default false, -- offer a waitlist sign-up once sold out
+  online_payment_enabled boolean not null default false, -- offer Bancontact/Mollie; off = bank transfer only
   rules_text text,                       -- optional rules shown before ordering
   rules_file_url text,                   -- optional uploaded PDF/photo of the rules
   is_published boolean not null default true,

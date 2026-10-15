@@ -36,6 +36,11 @@ nodig tegen een Google Formulier.
      stukje ervan terug. Met de schakelaar daar zet je online betalen aan of
      uit zonder de sleutel te wissen (staat het uit, dan blijft enkel
      overschrijven met QR-code over).
+   - De sleutel hierboven maakt online betalen *mogelijk*; of een evenement het
+     ook echt aanbiedt, zet je per evenement aan met de knop **"Bancontact
+     aan/uit"** in `/admin/events`. Staat die uit (de standaard), dan ziet een
+     bezoeker enkel overschrijven met QR-code. Staan beide aan, dan is
+     overschrijven nog steeds de vooraf aangevinkte keuze.
    - Wero: als Mollie Wero voor jouw account activeert, verschijnt dat
      automatisch als betaalmethode in de Mollie-checkout — geen code nodig.
 
@@ -155,7 +160,9 @@ niet kwijt te raken).
   verwijderen (typ "verwijder evenement" ter bevestiging), en per evenement
   een bankrekening en inschrijvingsdeadline instellen. Met **"Herinnering
   sturen"** mail je alle betaalde deelnemers van dat evenement, met een
-  optioneel eigen bericht erbij
+  optioneel eigen bericht erbij. De knop **"Bancontact aan/uit"** bepaalt per
+  evenement of online betalen aangeboden wordt; standaard staat die uit en kan
+  er enkel overgeschreven worden
 - `/admin/waitlist` — wachtlijst-aanmeldingen per evenement bekijken en
   omzetten naar een echte bestelling (overschrijving) zodra er een plaats
   vrijkomt, of verwijderen

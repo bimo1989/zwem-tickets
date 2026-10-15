@@ -22,6 +22,7 @@ type FormState = {
   registration_deadline: string;
   bank_account_id: string;
   waitlist_enabled: boolean;
+  online_payment_enabled: boolean;
   is_published: boolean;
   /** Set when duplicating: the event whose rules should be copied along. */
   duplicateFromId: string | null;
@@ -39,6 +40,8 @@ const emptyForm: FormState = {
   registration_deadline: "",
   bank_account_id: "",
   waitlist_enabled: false,
+  // Bank transfer is the default; Bancontact is switched on per event.
+  online_payment_enabled: false,
   is_published: true,
   duplicateFromId: null,
 };
@@ -136,6 +139,7 @@ export default function AdminEventsPage() {
         : null,
       bank_account_id: form.bank_account_id || null,
       waitlist_enabled: form.waitlist_enabled,
+      online_payment_enabled: form.online_payment_enabled,
       is_published: form.is_published,
     };
 
@@ -195,6 +199,15 @@ export default function AdminEventsPage() {
     loadEvents();
   }
 
+  async function toggleOnlinePayment(ev: EventRow) {
+    await fetch(`/api/admin/events/${ev.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ online_payment_enabled: !ev.online_payment_enabled }),
+    });
+    loadEvents();
+  }
+
   async function togglePublished(ev: EventRow) {
     await fetch(`/api/admin/events/${ev.id}`, {
       method: "PATCH",
@@ -248,6 +261,7 @@ export default function AdminEventsPage() {
       registration_deadline: "",
       bank_account_id: ev.bank_account_id ?? "",
       waitlist_enabled: false,
+      online_payment_enabled: ev.online_payment_enabled,
       is_published: false,
       // Carries the rules (text, document and checkboxes) over to the copy.
       duplicateFromId: ev.id,
@@ -278,6 +292,7 @@ export default function AdminEventsPage() {
         : "",
       bank_account_id: ev.bank_account_id ?? "",
       waitlist_enabled: ev.waitlist_enabled,
+      online_payment_enabled: ev.online_payment_enabled,
       is_published: ev.is_published,
       duplicateFromId: null,
     });
@@ -503,6 +518,18 @@ export default function AdminEventsPage() {
             Wachtlijst aanbieden zodra uitverkocht
           </label>
 
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={form.online_payment_enabled}
+              onChange={(e) =>
+                setForm({ ...form, online_payment_enabled: e.target.checked })
+              }
+            />
+            Online betalen toestaan (Bancontact, kaart, ...) — standaard enkel
+            overschrijven
+          </label>
+
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           <button
@@ -599,6 +626,21 @@ export default function AdminEventsPage() {
                   className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                 >
                   Dupliceer
+                </button>
+                <button
+                  onClick={() => toggleOnlinePayment(ev)}
+                  title={
+                    ev.online_payment_enabled
+                      ? "Bezoekers kunnen online betalen (Bancontact, kaart, ...). Klik om uit te zetten."
+                      : "Enkel overschrijven met QR-code. Klik om online betalen aan te zetten."
+                  }
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+                    ev.online_payment_enabled
+                      ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400"
+                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  }`}
+                >
+                  {ev.online_payment_enabled ? "Bancontact aan" : "Bancontact uit"}
                 </button>
                 <button
                   onClick={() => togglePublished(ev)}
