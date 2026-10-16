@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import type { BankAccountRow, PublicAppSettings } from "@/lib/supabase";
@@ -237,7 +237,7 @@ export default function AdminSettingsPage() {
                   )}
                 </p>
                 <p className="text-sm text-zinc-500">
-                  {acc.account_holder} Â· {acc.iban}
+                  {acc.account_holder} · {acc.iban}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export default function AdminSettingsPage() {
         <p className="mt-1 text-sm text-zinc-500">
           Gebruik <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">{"{nummer}"}</code>,{" "}
           <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">{"{evenement}"}</code> en/of{" "}
-          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">{"{naam}"}</code> â€” deze
+          <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">{"{naam}"}</code> — deze
           worden automatisch ingevuld per bestelling.
         </p>
 

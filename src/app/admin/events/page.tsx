@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -353,7 +353,7 @@ export default function AdminEventsPage() {
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              placeholder="PrivÃ© zwemmen voor mannen"
+              placeholder="Privé zwemmen voor mannen"
             />
           </Field>
 
@@ -407,11 +407,11 @@ export default function AdminEventsPage() {
 
           <div>
             <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              PrijscategorieÃ«n
+              Prijscategorieën
             </span>
             <p className="mt-1 text-xs text-zinc-400">
-              Voeg zoveel categorieÃ«n toe als je nodig hebt (bv. Leden, Niet-leden,
-              Studenten, ...). De koper kiest er bij het bestellen Ã©Ã©n.
+              Voeg zoveel categorieën toe als je nodig hebt (bv. Leden, Niet-leden,
+              Studenten, ...). De koper kiest er bij het bestellen één.
             </p>
             <div className="mt-2 flex flex-col gap-2">
               {form.priceTiers.map((tier, index) => (
@@ -428,7 +428,7 @@ export default function AdminEventsPage() {
                     step="0.01"
                     value={tier.price_euro}
                     onChange={(e) => updateTier(index, { price_euro: e.target.value })}
-                    placeholder="â‚¬"
+                    placeholder="€"
                     className="w-28 rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                   />
                   <button
@@ -437,7 +437,7 @@ export default function AdminEventsPage() {
                     disabled={form.priceTiers.length <= 1}
                     className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:border-zinc-700 dark:hover:bg-zinc-800"
                   >
-                    âœ•
+                    ✕
                   </button>
                 </div>
               ))}
@@ -491,7 +491,7 @@ export default function AdminEventsPage() {
             </select>
             {bankAccounts.length === 0 && (
               <p className="mt-1 text-xs text-zinc-400">
-                Nog geen rekeningen â€” voeg er een toe onder{" "}
+                Nog geen rekeningen — voeg er een toe onder{" "}
                 <Link href="/admin/settings" className="underline">
                   Instellingen
                 </Link>
@@ -526,7 +526,7 @@ export default function AdminEventsPage() {
                 setForm({ ...form, online_payment_enabled: e.target.checked })
               }
             />
-            Online betalen toestaan (Bancontact, kaart, ...) â€” standaard enkel
+            Online betalen toestaan (Bancontact, kaart, ...) — standaard enkel
             overschrijven
           </label>
 
@@ -562,22 +562,22 @@ export default function AdminEventsPage() {
               <div className="min-w-0">
                 <p className="font-medium text-zinc-900 dark:text-zinc-50">{ev.title}</p>
                 <p className="text-sm text-zinc-500">
-                  {ev.event_date} Â· {ev.start_time.slice(0, 5)}â€“{ev.end_time.slice(0, 5)} Â·{" "}
+                  {ev.event_date} · {ev.start_time.slice(0, 5)}–{ev.end_time.slice(0, 5)} ·{" "}
                   {[...ev.event_price_tiers]
                     .sort((a, b) => a.display_order - b.display_order)
-                    .map((t) => `${t.label} â‚¬${(t.price_cents / 100).toFixed(2)}`)
-                    .join(" Â· ")}{" "}
-                  Â· capaciteit {ev.capacity}
+                    .map((t) => `${t.label} €${(t.price_cents / 100).toFixed(2)}`)
+                    .join(" · ")}{" "}
+                  · capaciteit {ev.capacity}
                   {ev.waitlist_enabled && (
                     <>
                       {" "}
-                      Â· <span className="text-amber-600 dark:text-amber-400">wachtlijst aan</span>
+                      · <span className="text-amber-600 dark:text-amber-400">wachtlijst aan</span>
                     </>
                   )}
                   {ev.registration_deadline && (
                     <>
                       {" "}
-                      Â· inschrijving sluit{" "}
+                      · inschrijving sluit{" "}
                       {new Date(ev.registration_deadline).toLocaleString("nl-BE", {
                         dateStyle: "short",
                         timeStyle: "short",

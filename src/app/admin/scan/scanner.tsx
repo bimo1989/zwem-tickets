@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
@@ -120,7 +120,7 @@ export default function Scanner() {
                 key={i}
                 className={h.ok ? "text-emerald-600" : "text-red-500"}
               >
-                {h.time} â€” {h.message}
+                {h.time} — {h.message}
               </li>
             ))}
           </ul>
