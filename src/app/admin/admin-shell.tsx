@@ -14,9 +14,12 @@ const TABS = [
   { href: "/admin/settings", label: "Instellingen" },
 ];
 
-// A volunteer signed in with a scan code only gets the scanner, so don't show
-// them tabs they can't open.
+// Volunteers only get the tabs their code actually opens: a scan code the
+// camera, a helper code also the ticket overview.
 const SCANNER_TABS = TABS.filter((tab) => tab.href === "/admin/scan");
+const HELPER_TABS = TABS.filter(
+  (tab) => tab.href === "/admin" || tab.href === "/admin/scan"
+);
 
 export default function AdminShell({
   role,
@@ -38,7 +41,8 @@ export default function AdminShell({
     router.refresh();
   }
 
-  const tabs = role === "scanner" ? SCANNER_TABS : TABS;
+  const tabs =
+    role === "scanner" ? SCANNER_TABS : role === "helper" ? HELPER_TABS : TABS;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">

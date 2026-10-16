@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatScanCode, type ScannerCodeRow } from "@/lib/scanCode";
+import {
+  SCAN_CODE_ROLE_LABELS,
+  formatScanCode,
+  type ScanCodeRole,
+  type ScannerCodeRow,
+} from "@/lib/scanCode";
 
 /**
  * Scan-only access for volunteers. Each code is shown in full, because the
@@ -11,6 +16,7 @@ export default function ScannerCodesSection() {
   const [codes, setCodes] = useState<ScannerCodeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [label, setLabel] = useState("");
+  const [newRole, setNewRole] = useState<ScanCodeRole>("scanner");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -38,7 +44,7 @@ export default function ScannerCodesSection() {
     const res = await fetch("/api/admin/scanner-codes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label }),
+      body: JSON.stringify({ label, role: newRole }),
     });
     const data = await res.json();
 
@@ -83,12 +89,15 @@ export default function ScannerCodesSection() {
   return (
     <section className="mt-8">
       <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-        Scan-codes voor vrijwilligers
+        Codes voor vrijwilligers
       </h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Wie met zo&apos;n code inlogt, krijgt enkel de check-in scanner te zien —
-        geen bestellingen, geen instellingen. Geef iedereen een eigen code, dan
-        kun je één persoon intrekken zonder de rest te storen.
+        Twee soorten. <strong>Enkel scannen</strong> geeft alleen de camera aan
+        de ingang. <strong>Opvolging + scannen</strong> geeft daarnaast het
+        overzicht van de inschrijvingen, de WhatsApp-knoppen en het annuleren
+        van een onbetaalde inschrijving — maar niet het markeren van
+        betalingen, en geen instellingen of evenementen. Geef iedereen een
+        eigen code, dan kun je één persoon intrekken zonder de rest te storen.
       </p>
 
       <form onSubmit={handleCreate} className="mt-4 flex flex-wrap items-end gap-3">
@@ -104,6 +113,19 @@ export default function ScannerCodesSection() {
             placeholder="bv. Youssef, of zaalploeg zaterdag"
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Wat mag deze persoon?
+          </label>
+          <select
+            value={newRole}
+            onChange={(e) => setNewRole(e.target.value as ScanCodeRole)}
+            className="h-[42px] rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          >
+            <option value="scanner">{SCAN_CODE_ROLE_LABELS.scanner}</option>
+            <option value="helper">{SCAN_CODE_ROLE_LABELS.helper}</option>
+          </select>
         </div>
         <button
           type="submit"
@@ -129,6 +151,15 @@ export default function ScannerCodesSection() {
             <div>
               <p className="font-medium text-zinc-900 dark:text-zinc-50">
                 {code.label}
+                <span
+                  className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    code.role === "helper"
+                      ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400"
+                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  }`}
+                >
+                  {SCAN_CODE_ROLE_LABELS[code.role] ?? SCAN_CODE_ROLE_LABELS.scanner}
+                </span>
               </p>
               <p className="mt-0.5 font-mono text-lg tracking-widest text-zinc-900 dark:text-zinc-50">
                 {formatScanCode(code.code)}

@@ -6,6 +6,8 @@ import type { ScannerCodeRow } from "@/lib/scanCode";
 
 const createSchema = z.object({
   label: z.string().trim().min(1).max(80),
+  // 'scanner' = the door camera only; 'helper' also follows up registrations.
+  role: z.enum(["scanner", "helper"]).optional().default("scanner"),
 });
 
 /** Only a full admin may hand out or read the codes. */
@@ -61,7 +63,11 @@ export async function POST(req: NextRequest) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const { data, error } = await supabase
       .from("scanner_codes")
-      .insert({ label: parsed.data.label, code: generateScanCode() })
+      .insert({
+        label: parsed.data.label,
+        role: parsed.data.role,
+        code: generateScanCode(),
+      })
       .select()
       .single();
 

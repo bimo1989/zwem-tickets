@@ -2,10 +2,23 @@
 // client components can import them without pulling in next/headers, node
 // crypto or the Supabase service-role client.
 
+/**
+ * What a volunteer code grants. 'scanner' is the check-in camera and nothing
+ * else; 'helper' adds the ticket overview, the WhatsApp buttons and
+ * cancelling an unpaid order.
+ */
+export type ScanCodeRole = "scanner" | "helper";
+
+export const SCAN_CODE_ROLE_LABELS: Record<ScanCodeRole, string> = {
+  scanner: "Enkel scannen",
+  helper: "Opvolging + scannen",
+};
+
 export type ScannerCodeRow = {
   id: string;
   label: string;
   code: string;
+  role: ScanCodeRole;
   created_at: string;
   last_used_at: string | null;
 };

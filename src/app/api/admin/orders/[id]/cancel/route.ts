@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { getRole } from "@/lib/auth";
+import { canFollowUpOrders, getRole } from "@/lib/auth";
 
 /**
  * Cancels an order that was never paid, which is what frees the spot: the
@@ -15,7 +15,9 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if ((await getRole()) !== "admin") {
+  // Helpers may free a seat too: chasing a transfer that never arrives is
+  // exactly their job, and the order is kept either way.
+  if (!canFollowUpOrders(await getRole())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

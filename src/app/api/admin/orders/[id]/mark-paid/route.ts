@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendTicketEmail } from "@/lib/email";
+import { getRole } from "@/lib/auth";
 
 // Manual confirmation for bank-transfer orders: an admin has seen the
 // matching transfer land in the bank account and confirms it here.
@@ -8,6 +9,12 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Confirming that money arrived stays with the admin — a volunteer code
+  // handed out on a slip of paper should not be able to do this.
+  if ((await getRole()) !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { id } = await params;
   const supabase = getSupabaseAdmin();
 

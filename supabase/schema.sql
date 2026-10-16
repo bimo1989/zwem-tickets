@@ -155,6 +155,9 @@ create table if not exists scanner_codes (
   id uuid primary key default gen_random_uuid(),
   label text not null,
   code text not null unique,
+  -- 'scanner' = the check-in camera only; 'helper' = also the ticket
+  -- overview, the WhatsApp buttons and cancelling an unpaid order.
+  role text not null default 'scanner' check (role in ('scanner', 'helper')),
   created_at timestamptz not null default now(),
   last_used_at timestamptz
 );

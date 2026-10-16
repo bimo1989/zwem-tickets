@@ -15,7 +15,12 @@ export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
 // A volunteer's shift can run a whole evening, so don't log them out halfway.
 export const SCANNER_SESSION_MAX_AGE = 60 * 60 * 12;
 
-export type Role = "admin" | "scanner";
+export type Role = "admin" | "helper" | "scanner";
+
+/** Roles that may see the ticket overview and message buyers. */
+export function canFollowUpOrders(role: Role | null): boolean {
+  return role === "admin" || role === "helper";
+}
 
 export function generateScanCode(): string {
   let code = "";
@@ -77,7 +82,8 @@ export async function getRole(): Promise<Role | null> {
   const scannerCookie = jar.get(SCANNER_COOKIE)?.value;
   if (scannerCookie) {
     const row = await findScannerCode(scannerCookie);
-    if (row) return "scanner";
+    // Codes created before the role column existed read as scanners.
+    if (row) return row.role === "helper" ? "helper" : "scanner";
   }
 
   return null;

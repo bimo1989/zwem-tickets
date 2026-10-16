@@ -3,9 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 const ADMIN_COOKIE = "admin_session";
 const SCANNER_COOKIE = "scanner_session";
 
-// What a volunteer with a scan code may reach. Everything else under /admin is
-// for the real admin session only.
-const SCANNER_PATHS = ["/admin/scan", "/api/admin/checkin"];
+// What a volunteer code may reach at most. This is the union of what a
+// 'scanner' and a 'helper' can do, because this file has no database access
+// and cannot tell the two apart — the exact role is checked by getRole() in
+// each page and route below. Everything outside this list is admin-only.
+const CODE_PREFIXES = [
+  "/admin/scan",
+  "/api/admin/checkin",
+  "/api/admin/orders", // helpers only; the routes themselves check the role
+];
+// Matched exactly, otherwise "/admin" would open the whole admin area.
+const CODE_EXACT = ["/admin"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -31,10 +39,11 @@ export function proxy(req: NextRequest) {
   // against the database by getRole() in the scanner's own page and route —
   // a forged cookie gets no further than this.
   const hasScannerCookie = !!req.cookies.get(SCANNER_COOKIE)?.value;
-  const isScannerPath = SCANNER_PATHS.some((p) => pathname.startsWith(p));
+  const isCodePath =
+    CODE_EXACT.includes(pathname) || CODE_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (hasScannerCookie) {
-    if (isScannerPath) return NextResponse.next();
+    if (isCodePath) return NextResponse.next();
     // A volunteer who lands on another admin page goes to the one page they
     // do have: the scanner.
     if (isAdminApiPath) {
