@@ -64,6 +64,7 @@ create table if not exists orders (
   paid_at timestamptz,
   ticket_email_sent_at timestamptz,       -- when the confirmation mail went out (null = never)
   reminder_sent_at timestamptz,           -- when the reminder for this event went out
+  whatsapp_sent_at timestamptz,           -- when a WhatsApp chat was opened for this order
   agreed_at timestamptz,                  -- when the buyer accepted the rules
   agreed_items jsonb                      -- snapshot of the exact texts they accepted
 );

@@ -61,6 +61,8 @@ export type OrderRow = {
   paid_at: string | null;
   ticket_email_sent_at: string | null;
   reminder_sent_at: string | null;
+  /** When a WhatsApp chat was opened for this order from the admin. */
+  whatsapp_sent_at: string | null;
   agreed_at: string | null;
   /** Snapshot of the exact texts this buyer accepted, kept as proof. */
   agreed_items: string[] | null;

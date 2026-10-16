@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { EventRow, OrderRow } from "@/lib/supabase";
 // Type-only, so none of auth.ts's server imports reach the browser bundle.
 import type { Role } from "@/lib/auth";
-import { buildWhatsAppLink, buildWhatsAppShareLink } from "@/lib/whatsapp";
+import {
+  buildWhatsAppLink,
+  buildWhatsAppShareLink,
+  normalizePhoneForWhatsApp,
+} from "@/lib/whatsapp";
 
 const STATUS_LABELS: Record<OrderRow["status"], string> = {
   paid: "Betaald",
@@ -29,6 +33,9 @@ export default function OrdersView() {
   const [loading, setLoading] = useState(true);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
+  // Skipping is local to this sitting; marking someone done is shared, so a
+  // second volunteer doesn't message them again.
+  const [skippedIds, setSkippedIds] = useState<string[]>([]);
   // Comes back with the orders; decides which actions are shown. The server
   // refuses the rest regardless of what the page renders.
   const [role, setRole] = useState<Role | null>(null);
@@ -192,6 +199,36 @@ export default function OrdersView() {
     URL.revokeObjectURL(url);
   }
 
+  // Who still needs a message, in the order the list shows them. Cancelled,
+  // expired and failed orders are left out: there's nothing to say to them.
+  const whatsAppCandidates = useMemo(
+    () =>
+      filteredOrders.filter(
+        (o) =>
+          !!o.buyer_phone &&
+          (o.status === "paid" || o.status === "open") &&
+          !!normalizePhoneForWhatsApp(o.buyer_phone)
+      ),
+    [filteredOrders]
+  );
+  const whatsAppDone = whatsAppCandidates.filter((o) => o.whatsapp_sent_at);
+  const whatsAppQueue = whatsAppCandidates.filter((o) => !o.whatsapp_sent_at);
+  const nextInQueue = whatsAppQueue.find((o) => !skippedIds.includes(o.id));
+
+  async function markWhatsAppSent(orderId: string, reset = false) {
+    const res = await fetch(`/api/admin/orders/${orderId}/whatsapp-sent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reset }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error ?? "Kon dit niet bijhouden.");
+      return;
+    }
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? data.order : o)));
+  }
+
   /** Shared by the desktop table and the mobile cards. */
   function actionsFor(o: OrderRow) {
     const whatsAppLink = whatsAppLinkFor(o);
@@ -249,8 +286,15 @@ export default function OrdersView() {
             href={whatsAppLink}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => markWhatsAppSent(o.id)}
+            title={
+              o.whatsapp_sent_at
+                ? `Al gecontacteerd op ${new Date(o.whatsapp_sent_at).toLocaleString("nl-BE")}`
+                : undefined
+            }
             className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
           >
+            {o.whatsapp_sent_at ? "✓ " : ""}
             {o.status === "paid" ? "Ticket via WhatsApp" : "WhatsApp sturen"}
           </a>
         )}
@@ -314,6 +358,66 @@ export default function OrdersView() {
             value={`€${(summary.revenueCents / 100).toFixed(2)}`}
           />
         </div>
+
+        {/* WhatsApp doesn't let a website send to many people at once — every
+            message is one send from your own phone. What this removes is the
+            bookkeeping: who's next, and who already had theirs. */}
+        {whatsAppQueue.length > 0 && (
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
+                WhatsApp-ronde
+              </p>
+              <p className="text-xs text-emerald-800/80 dark:text-emerald-300/70">
+                {whatsAppDone.length} van {whatsAppDone.length + whatsAppQueue.length}{" "}
+                gecontacteerd
+              </p>
+            </div>
+
+            {nextInQueue ? (
+              <>
+                <p className="mt-2 text-sm text-emerald-800 dark:text-emerald-300">
+                  Volgende: <strong>{nextInQueue.buyer_name}</strong> ·{" "}
+                  {STATUS_LABELS[nextInQueue.status].toLowerCase()} ·{" "}
+                  {nextInQueue.buyer_phone}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <a
+                    href={whatsAppLinkFor(nextInQueue) ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => markWhatsAppSent(nextInQueue.id)}
+                    className="rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-800"
+                  >
+                    Open WhatsApp voor {nextInQueue.buyer_name.split(" ")[0]}
+                  </a>
+                  <button
+                    onClick={() => setSkippedIds((prev) => [...prev, nextInQueue.id])}
+                    className="rounded-md border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                  >
+                    Overslaan
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-emerald-800/70 dark:text-emerald-300/60">
+                  WhatsApp opent met het bericht klaar — jij drukt zelf op
+                  verzenden. Daarna kom je hier terug voor de volgende.
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-emerald-800 dark:text-emerald-300">
+                Iedereen is gecontacteerd of overgeslagen.
+                {skippedIds.length > 0 && (
+                  <button
+                    onClick={() => setSkippedIds([])}
+                    className="ml-2 underline"
+                  >
+                    Toon de {skippedIds.length} overgeslagen opnieuw
+                  </button>
+                )}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-8 hidden overflow-x-auto rounded-xl border border-zinc-200 lg:block dark:border-zinc-800">
           <table className="w-full text-left text-sm">
