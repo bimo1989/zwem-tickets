@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getRole } from "@/lib/auth";
 import ScanLoginForm from "./scan-login-form";
@@ -13,5 +14,10 @@ export const metadata = {
 export default async function ScanLoginPage() {
   if (await getRole()) redirect("/admin/scan");
 
-  return <ScanLoginForm />;
+  // The form reads ?code= from the URL, which needs a Suspense boundary.
+  return (
+    <Suspense>
+      <ScanLoginForm />
+    </Suspense>
+  );
 }

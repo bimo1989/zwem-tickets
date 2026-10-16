@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatScanCode, normalizeScanCode } from "@/lib/scanCode";
 
@@ -12,7 +12,10 @@ import { formatScanCode, normalizeScanCode } from "@/lib/scanCode";
  */
 export default function ScanLoginForm() {
   const router = useRouter();
-  const [code, setCode] = useState("");
+  // A code handed out over WhatsApp arrives as /scan?code=ABCD-2345, so the
+  // volunteer only has to press the button.
+  const prefilled = useSearchParams().get("code") ?? "";
+  const [code, setCode] = useState(prefilled);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

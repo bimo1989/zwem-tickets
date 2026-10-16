@@ -49,9 +49,14 @@ export async function POST(req: NextRequest) {
       role: "scanner",
       redirectTo: "/admin/scan",
     });
+    // Never let the session outlive the code itself.
+    const secondsUntilExpiry = scannerCode.expires_at
+      ? Math.floor((new Date(scannerCode.expires_at).getTime() - Date.now()) / 1000)
+      : SCANNER_SESSION_MAX_AGE;
+
     res.cookies.set(SCANNER_COOKIE, scannerCode.code, {
       ...cookieOptions,
-      maxAge: SCANNER_SESSION_MAX_AGE,
+      maxAge: Math.max(0, Math.min(SCANNER_SESSION_MAX_AGE, secondsUntilExpiry)),
     });
     return res;
   }

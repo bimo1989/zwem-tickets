@@ -158,6 +158,7 @@ create table if not exists scanner_codes (
   -- 'scanner' = the check-in camera only; 'helper' = also the ticket
   -- overview, the WhatsApp buttons and cancelling an unpaid order.
   role text not null default 'scanner' check (role in ('scanner', 'helper')),
+  expires_at timestamptz,        -- null = valid until deleted
   created_at timestamptz not null default now(),
   last_used_at timestamptz
 );

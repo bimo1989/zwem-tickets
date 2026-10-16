@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   CODE_ALPHABET,
   CODE_LENGTH,
+  isExpired,
   normalizeScanCode,
   type ScannerCodeRow,
 } from "@/lib/scanCode";
@@ -54,7 +55,14 @@ export async function findScannerCode(rawCode: string): Promise<ScannerCodeRow |
     .eq("code", code)
     .maybeSingle();
 
-  return (data as ScannerCodeRow) ?? null;
+  const row = (data as ScannerCodeRow) ?? null;
+
+  // An expired code counts as no code at all. Because every page and route
+  // looks the code up on each request, this also ends a session that was
+  // already open rather than only blocking new logins.
+  if (!row || isExpired(row.expires_at)) return null;
+
+  return row;
 }
 
 export async function touchScannerCode(id: string): Promise<void> {

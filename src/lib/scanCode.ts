@@ -19,9 +19,15 @@ export type ScannerCodeRow = {
   label: string;
   code: string;
   role: ScanCodeRole;
+  /** ISO timestamp, or null when the code is valid until it's deleted. */
+  expires_at: string | null;
   created_at: string;
   last_used_at: string | null;
 };
+
+export function isExpired(expiresAt: string | null | undefined): boolean {
+  return !!expiresAt && new Date(expiresAt).getTime() <= Date.now();
+}
 
 // No 0/O/1/I, so a code stays readable when it's written on a slip of paper
 // or read out over the phone.

@@ -4,9 +4,28 @@ import { useEffect, useState } from "react";
 import {
   SCAN_CODE_ROLE_LABELS,
   formatScanCode,
+  isExpired,
   type ScanCodeRole,
   type ScannerCodeRow,
 } from "@/lib/scanCode";
+import { buildWhatsAppShareLink } from "@/lib/whatsapp";
+
+/** How long a freshly handed-out code stays usable. */
+const VALIDITY_OPTIONS = [
+  { value: "none", label: "Tot ik ze intrek", hours: null },
+  { value: "12h", label: "12 uur", hours: 12 },
+  { value: "1d", label: "1 dag", hours: 24 },
+  { value: "1w", label: "1 week", hours: 24 * 7 },
+  { value: "1m", label: "1 maand", hours: 24 * 30 },
+] as const;
+
+type ValidityChoice = (typeof VALIDITY_OPTIONS)[number]["value"];
+
+function expiryFor(choice: ValidityChoice): string | null {
+  const option = VALIDITY_OPTIONS.find((o) => o.value === choice);
+  if (!option?.hours) return null;
+  return new Date(Date.now() + option.hours * 3600 * 1000).toISOString();
+}
 
 /**
  * Scan-only access for volunteers. Each code is shown in full, because the
@@ -17,6 +36,7 @@ export default function ScannerCodesSection() {
   const [loading, setLoading] = useState(true);
   const [label, setLabel] = useState("");
   const [newRole, setNewRole] = useState<ScanCodeRole>("scanner");
+  const [validity, setValidity] = useState<ValidityChoice>("none");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -44,7 +64,11 @@ export default function ScannerCodesSection() {
     const res = await fetch("/api/admin/scanner-codes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label, role: newRole }),
+      body: JSON.stringify({
+        label,
+        role: newRole,
+        expires_at: expiryFor(validity),
+      }),
     });
     const data = await res.json();
 
@@ -76,9 +100,43 @@ export default function ScannerCodesSection() {
     load();
   }
 
+  /** A link that lands on the login page with the code already filled in. */
+  function loginLinkFor(code: ScannerCodeRow): string {
+    const origin = typeof window === "undefined" ? "" : window.location.origin;
+    return `${origin}/scan?code=${formatScanCode(code.code)}`;
+  }
+
+  /**
+   * Opens WhatsApp with the instructions ready to send. No recipient is
+   * fixed, so WhatsApp asks who it goes to — we don't store the volunteer's
+   * number anywhere.
+   */
+  function whatsAppLinkFor(code: ScannerCodeRow): string {
+    const what =
+      code.role === "helper"
+        ? "de inschrijvingen op te volgen en tickets te scannen"
+        : "tickets te scannen aan de ingang";
+
+    const message = [
+      `Hallo ${code.label}, hierbij je toegang om ${what} voor MC Attawassul.`,
+      "",
+      `Open deze link, je code staat er al in: ${loginLinkFor(code)}`,
+      "",
+      `Lukt dat niet, ga dan naar ${typeof window === "undefined" ? "" : window.location.origin}/scan en typ de code ${formatScanCode(code.code)}.`,
+      "",
+      code.expires_at
+        ? `Deze code werkt tot ${new Date(code.expires_at).toLocaleString("nl-BE")}. Deel ze met niemand anders.`
+        : "Je blijft 12 uur ingelogd. Deel deze code met niemand anders.",
+    ].join("\n");
+
+    return buildWhatsAppShareLink(message);
+  }
+
   async function handleCopy(code: ScannerCodeRow) {
     try {
-      await navigator.clipboard.writeText(formatScanCode(code.code));
+      // The link, not the bare code: the code itself is already on screen in
+      // large type to read out loud.
+      await navigator.clipboard.writeText(loginLinkFor(code));
       setCopied(code.id);
       setTimeout(() => setCopied(null), 1500);
     } catch {
@@ -127,6 +185,22 @@ export default function ScannerCodesSection() {
             <option value="helper">{SCAN_CODE_ROLE_LABELS.helper}</option>
           </select>
         </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Geldig
+          </label>
+          <select
+            value={validity}
+            onChange={(e) => setValidity(e.target.value as ValidityChoice)}
+            className="h-[42px] rounded-md border border-zinc-300 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          >
+            {VALIDITY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="submit"
           disabled={creating || label.trim().length === 0}
@@ -168,9 +242,23 @@ export default function ScannerCodesSection() {
                 {code.last_used_at
                   ? `Laatst gebruikt: ${new Date(code.last_used_at).toLocaleString("nl-BE")}`
                   : "Nog niet gebruikt"}
+                {" · "}
+                {!code.expires_at
+                  ? "geldig tot je ze intrekt"
+                  : isExpired(code.expires_at)
+                    ? `verlopen op ${new Date(code.expires_at).toLocaleString("nl-BE")}`
+                    : `geldig tot ${new Date(code.expires_at).toLocaleString("nl-BE")}`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={whatsAppLinkFor(code)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+              >
+                Via WhatsApp sturen
+              </a>
               <button
                 onClick={() => handleCopy(code)}
                 className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"

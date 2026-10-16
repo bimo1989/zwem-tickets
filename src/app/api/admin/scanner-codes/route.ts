@@ -8,6 +8,8 @@ const createSchema = z.object({
   label: z.string().trim().min(1).max(80),
   // 'scanner' = the door camera only; 'helper' also follows up registrations.
   role: z.enum(["scanner", "helper"]).optional().default("scanner"),
+  // ISO timestamp; null or absent means valid until deleted.
+  expires_at: z.string().trim().datetime().nullable().optional(),
 });
 
 /** Only a full admin may hand out or read the codes. */
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
       .insert({
         label: parsed.data.label,
         role: parsed.data.role,
+        expires_at: parsed.data.expires_at ?? null,
         code: generateScanCode(),
       })
       .select()
