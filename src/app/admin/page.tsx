@@ -107,7 +107,9 @@ export default function AdminPage() {
 
     let message: string;
     if (order.status === "paid") {
-      message = `Hallo ${order.buyer_name}, dit is een bericht van ${event?.title ?? "ons"}.`;
+      // Delivers the ticket itself — useful when the confirmation mail never
+      // arrived, or didn't go out at all.
+      message = `Hallo ${order.buyer_name}, je inschrijving voor "${event?.title ?? "het evenement"}" is bevestigd. Via deze link vind je je ticket met de QR-code die aan de ingang gescand wordt, en kan je het ook als PDF bewaren: ${ticketUrl} — tot dan!`;
     } else if (order.payment_method === "bank_transfer") {
       message = `Hallo ${order.buyer_name}, we zien nog geen betaling binnenkomen voor je ticket voor "${event?.title ?? "het evenement"}" (referentie ${shortCode}). Via deze link vind je de betaalgegevens (IBAN + QR-code) nog eens terug: ${ticketUrl} — kan je dit even in orde brengen? Bedankt!`;
     } else {
@@ -333,20 +335,22 @@ export default function AdminPage() {
                               : "Mail versturen"}
                         </button>
                       )}
-                      {o.status !== "paid" &&
-                        (() => {
-                          const link = whatsAppLinkFor(o);
-                          return link ? (
-                            <a
-                              href={link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
-                            >
-                              WhatsApp sturen
-                            </a>
-                          ) : null;
-                        })()}
+                      {(() => {
+                        const link = whatsAppLinkFor(o);
+                        if (!link) return null;
+                        return (
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                          >
+                            {o.status === "paid"
+                              ? "Ticket via WhatsApp"
+                              : "WhatsApp sturen"}
+                          </a>
+                        );
+                      })()}
                     </div>
                   </td>
                 </tr>
