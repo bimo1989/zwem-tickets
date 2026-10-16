@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
@@ -81,7 +81,7 @@ export default function Scanner() {
   }, [handleScan]);
 
   return (
-    <main className="mx-auto max-w-md px-6 py-12">
+    <main className="mx-auto max-w-md px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
         Check-in scanner
       </h1>
@@ -120,7 +120,7 @@ export default function Scanner() {
                 key={i}
                 className={h.ok ? "text-emerald-600" : "text-red-500"}
               >
-                {h.time} — {h.message}
+                {h.time} â€” {h.message}
               </li>
             ))}
           </ul>

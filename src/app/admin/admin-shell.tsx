@@ -47,8 +47,8 @@ export default function AdminShell({
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <Image
               src="/logo-icon.jpg"
               alt="MC Attawassul"
@@ -56,7 +56,8 @@ export default function AdminShell({
               height={400}
               className="h-8 w-8 rounded-full"
             />
-            <nav className="flex gap-1">
+            {/* Scrolls sideways on a phone instead of pushing the page wide. */}
+            <nav className="flex gap-1 overflow-x-auto">
               {tabs.map((tab) => {
                 const active =
                   tab.href === "/admin"
@@ -66,7 +67,7 @@ export default function AdminShell({
                   <Link
                     key={tab.href}
                     href={tab.href}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                    className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition ${
                       active
                         ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
                         : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import type { OrderRow } from "@/lib/supabase";
@@ -87,7 +87,7 @@ export default function AdminReconcilePage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
         Bankafschrift vergelijken
       </h1>
@@ -137,12 +137,12 @@ export default function AdminReconcilePage() {
                   />
                   <div>
                     <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      {m.order.buyer_name} · {m.order.events?.title ?? "Onbekend evenement"} · €
+                      {m.order.buyer_name} Â· {m.order.events?.title ?? "Onbekend evenement"} Â· â‚¬
                       {(m.order.amount_cents / 100).toFixed(2)}
                     </p>
                     <p className="text-xs text-zinc-500">
                       Gevonden: &quot;{m.bankRow.communication}&quot;
-                      {m.bankRow.counterpartyName && ` — ${m.bankRow.counterpartyName}`}
+                      {m.bankRow.counterpartyName && ` â€” ${m.bankRow.counterpartyName}`}
                       {m.bankRow.date && ` (${m.bankRow.date})`}
                     </p>
                   </div>
@@ -185,7 +185,7 @@ export default function AdminReconcilePage() {
               </h2>
               <p className="mt-1 text-sm text-zinc-500">
                 Deze openstaande overschrijvingen kwamen niet overeen met een rij in het
-                bestand — mogelijk nog niet betaald, of de naam/het bedrag komt niet exact
+                bestand â€” mogelijk nog niet betaald, of de naam/het bedrag komt niet exact
                 overeen.
               </p>
               <div className="mt-3 flex flex-col gap-2">
@@ -194,7 +194,7 @@ export default function AdminReconcilePage() {
                     key={o.id}
                     className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900"
                   >
-                    {o.buyer_name} · {o.events?.title ?? "Onbekend evenement"} · €
+                    {o.buyer_name} Â· {o.events?.title ?? "Onbekend evenement"} Â· â‚¬
                     {(o.amount_cents / 100).toFixed(2)}
                   </div>
                 ))}

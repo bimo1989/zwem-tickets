@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import type { EventPriceTierRow, EventRow, WaitlistEntryRow } from "@/lib/supabase";
@@ -86,7 +86,7 @@ export default function AdminWaitlistPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Wachtlijst</h1>
       <p className="mt-1 text-sm text-zinc-500">
         Mensen die zich aanmeldden toen een evenement uitverkocht was. Zet een
@@ -110,7 +110,7 @@ export default function AdminWaitlistPage() {
             >
               {events.map((ev) => (
                 <option key={ev.id} value={ev.id}>
-                  {ev.title} · {ev.event_date}
+                  {ev.title} Â· {ev.event_date}
                   {ev.waitlist_enabled ? "" : " (wachtlijst niet ingeschakeld)"}
                 </option>
               ))}
@@ -120,7 +120,7 @@ export default function AdminWaitlistPage() {
           {selectedEvent && !selectedEvent.waitlist_enabled && (
             <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950 dark:text-amber-400">
               Wachtlijst is niet ingeschakeld voor dit evenement. Schakel deze in
-              bij Evenementen om nieuwe aanmeldingen mogelijk te maken —
+              bij Evenementen om nieuwe aanmeldingen mogelijk te maken â€”
               bestaande aanmeldingen hieronder blijven wel beschikbaar.
             </p>
           )}
@@ -186,7 +186,7 @@ export default function AdminWaitlistPage() {
                                     .sort((a, b) => a.display_order - b.display_order)
                                     .map((tier) => (
                                       <option key={tier.id} value={tier.id}>
-                                        {tier.label} · €{(tier.price_cents / 100).toFixed(2)}
+                                        {tier.label} Â· â‚¬{(tier.price_cents / 100).toFixed(2)}
                                       </option>
                                     ))}
                                 </select>

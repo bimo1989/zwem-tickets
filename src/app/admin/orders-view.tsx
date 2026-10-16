@@ -192,18 +192,85 @@ export default function OrdersView() {
     URL.revokeObjectURL(url);
   }
 
+  /** Shared by the desktop table and the mobile cards. */
+  function actionsFor(o: OrderRow) {
+    const whatsAppLink = whatsAppLinkFor(o);
+
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {isAdmin && o.status !== "paid" && (
+          <button
+            onClick={() => handleMarkPaid(o.id)}
+            className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+          >
+            Markeer betaald
+          </button>
+        )}
+        {o.status === "open" &&
+          (confirmingCancelId === o.id ? (
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-red-300 px-2 py-1 text-xs dark:border-red-800">
+              <span className="text-red-700 dark:text-red-400">Plaats vrijgeven?</span>
+              <button
+                onClick={() => handleCancel(o.id)}
+                className="font-medium text-red-700 underline dark:text-red-400"
+              >
+                Ja, annuleer
+              </button>
+              <button
+                onClick={() => setConfirmingCancelId(null)}
+                className="text-zinc-500 underline"
+              >
+                Nee
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={() => setConfirmingCancelId(o.id)}
+              className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+            >
+              Annuleer
+            </button>
+          ))}
+        {isAdmin && o.status === "paid" && (
+          <button
+            onClick={() => handleResendTicket(o.id)}
+            disabled={resendingId === o.id}
+            className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {resendingId === o.id
+              ? "Versturen..."
+              : o.ticket_email_sent_at
+                ? "Mail opnieuw sturen"
+                : "Mail versturen"}
+          </button>
+        )}
+        {whatsAppLink && (
+          <a
+            href={whatsAppLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+          >
+            {o.status === "paid" ? "Ticket via WhatsApp" : "WhatsApp sturen"}
+          </a>
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return <div className="p-10 text-zinc-500">Laden...</div>;
   }
 
   return (
     <div>
-      <main className="mx-auto max-w-4xl px-6 py-12">
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             Ticketoverzicht
           </h1>
-          <div className="flex items-center gap-2">
+          {/* Stacks to full width on a phone instead of squeezing into a row. */}
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <select
               value={selectedEventId}
               onChange={(e) => setSelectedEventId(e.target.value)}
@@ -239,7 +306,7 @@ export default function OrdersView() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           <SummaryCard label="Betaalde tickets" value={String(summary.paidCount)} />
           <SummaryCard label="In afwachting" value={String(summary.pendingCount)} />
           <SummaryCard
@@ -248,7 +315,7 @@ export default function OrdersView() {
           />
         </div>
 
-        <div className="mt-8 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <div className="mt-8 hidden overflow-x-auto rounded-xl border border-zinc-200 lg:block dark:border-zinc-800">
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
               <tr>
@@ -292,74 +359,7 @@ export default function OrdersView() {
                   <td className="px-4 py-2 text-zinc-500">
                     {new Date(o.created_at).toLocaleString("nl-BE")}
                   </td>
-                  <td className="px-4 py-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {isAdmin && o.status !== "paid" && (
-                        <button
-                          onClick={() => handleMarkPaid(o.id)}
-                          className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
-                        >
-                          Markeer betaald
-                        </button>
-                      )}
-                      {o.status === "open" &&
-                        (confirmingCancelId === o.id ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-md border border-red-300 px-2 py-1 text-xs dark:border-red-800">
-                            <span className="text-red-700 dark:text-red-400">
-                              Plaats vrijgeven?
-                            </span>
-                            <button
-                              onClick={() => handleCancel(o.id)}
-                              className="font-medium text-red-700 underline dark:text-red-400"
-                            >
-                              Ja, annuleer
-                            </button>
-                            <button
-                              onClick={() => setConfirmingCancelId(null)}
-                              className="text-zinc-500 underline"
-                            >
-                              Nee
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmingCancelId(o.id)}
-                            className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-                          >
-                            Annuleer
-                          </button>
-                        ))}
-                      {isAdmin && o.status === "paid" && (
-                        <button
-                          onClick={() => handleResendTicket(o.id)}
-                          disabled={resendingId === o.id}
-                          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        >
-                          {resendingId === o.id
-                            ? "Versturen..."
-                            : o.ticket_email_sent_at
-                              ? "Mail opnieuw sturen"
-                              : "Mail versturen"}
-                        </button>
-                      )}
-                      {(() => {
-                        const link = whatsAppLinkFor(o);
-                        if (!link) return null;
-                        return (
-                          <a
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="rounded-md border border-emerald-300 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
-                          >
-                            {o.status === "paid"
-                              ? "Ticket via WhatsApp"
-                              : "WhatsApp sturen"}
-                          </a>
-                        );
-                      })()}
-                    </div>
-                  </td>
+                  <td className="px-4 py-2">{actionsFor(o)}</td>
                 </tr>
               ))}
               {filteredOrders.length === 0 && (
@@ -372,7 +372,73 @@ export default function OrdersView() {
             </tbody>
           </table>
         </div>
+
+        {/* Below lg the same rows as cards: eleven columns don't fit on a
+            phone, and sideways scrolling makes the actions unreachable. */}
+        <div className="mt-6 flex flex-col gap-3 lg:hidden">
+          {filteredOrders.length === 0 && (
+            <p className="rounded-xl border border-zinc-200 px-4 py-6 text-center text-zinc-500 dark:border-zinc-800">
+              Geen bestellingen gevonden.
+            </p>
+          )}
+          {filteredOrders.map((o) => (
+            <div
+              key={o.id}
+              className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">
+                    {o.buyer_name}
+                  </p>
+                  <p className="truncate text-xs text-zinc-500">{o.buyer_email}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[o.status]}`}
+                >
+                  {STATUS_LABELS[o.status]}
+                </span>
+              </div>
+
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <CardRow label="Aantal" value={`${o.quantity} · ${o.price_tier_label}`} />
+                <CardRow label="Bedrag" value={`€${(o.amount_cents / 100).toFixed(2)}`} />
+                <CardRow
+                  label="Methode"
+                  value={o.payment_method === "bank_transfer" ? "Overschrijving" : "Mollie"}
+                />
+                <CardRow
+                  label="Ingecheckt"
+                  value={o.status === "paid" ? `${o.checked_in_count} / ${o.quantity}` : "—"}
+                />
+                <div className="col-span-2 flex items-center gap-2">
+                  <dt className="text-xs text-zinc-500">Mail</dt>
+                  <dd>
+                    <MailStatus order={o} />
+                  </dd>
+                </div>
+              </dl>
+
+              <p className="mt-3 text-xs text-zinc-400">
+                Besteld op {new Date(o.created_at).toLocaleString("nl-BE")}
+              </p>
+
+              <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                {actionsFor(o)}
+              </div>
+            </div>
+          ))}
+        </div>
       </main>
+    </div>
+  );
+}
+
+function CardRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-zinc-500">{label}</dt>
+      <dd className="text-zinc-800 dark:text-zinc-200">{value}</dd>
     </div>
   );
 }
