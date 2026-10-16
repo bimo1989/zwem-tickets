@@ -19,6 +19,8 @@ export default function RulesPanel({
   const [loading, setLoading] = useState(false);
   const [rulesText, setRulesText] = useState(event.rules_text ?? "");
   const [textSaved, setTextSaved] = useState(true);
+  const [infoText, setInfoText] = useState(event.info_text ?? "");
+  const [infoSaved, setInfoSaved] = useState(true);
   const [newItem, setNewItem] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -63,6 +65,13 @@ export default function RulesPanel({
     setBusy(false);
   }
 
+  async function handleSaveInfoText() {
+    setBusy(true);
+    const saved = await patchEvent({ info_text: infoText.trim() || null });
+    if (saved) setInfoSaved(true);
+    setBusy(false);
+  }
+
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -96,7 +105,10 @@ export default function RulesPanel({
     setAgreements((prev) => prev.filter((a) => a.id !== id));
   }
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(
+    e: React.ChangeEvent<HTMLInputElement>,
+    kind: "rules" | "info"
+  ) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -105,6 +117,7 @@ export default function RulesPanel({
 
     const body = new FormData();
     body.append("file", file);
+    body.append("kind", kind);
 
     const res = await fetch(`/api/admin/events/${event.id}/rules-file`, {
       method: "POST",
@@ -127,7 +140,7 @@ export default function RulesPanel({
         onClick={handleOpen}
         className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
       >
-        Reglement
+        Reglement &amp; info
       </button>
     );
   }
@@ -198,12 +211,71 @@ export default function RulesPanel({
         <input
           type="file"
           accept="application/pdf,image/png,image/jpeg,image/webp"
-          onChange={handleUpload}
+          onChange={(e) => handleUpload(e, "rules")}
           disabled={uploading}
           className="mt-2 block w-full text-xs text-zinc-600 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium dark:text-zinc-400 dark:file:border-zinc-700 dark:file:bg-zinc-800 dark:file:text-zinc-200"
         />
         {uploading && <p className="mt-1 text-xs text-zinc-500">Uploaden...</p>}
         <p className="mt-1 text-xs text-zinc-500">PDF, JPG, PNG of WEBP, max 8 MB.</p>
+      </div>
+
+      {/* Practical info — shown after booking, on the ticket page */}
+      <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+        <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          Praktische info (op het ticket)
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Dit verschijnt onder de QR-code op het ticket en in de bevestigingsmail,
+          zodat deelnemers het de avond voordien kunnen herlezen. Denk aan
+          openingsuur, wat ze moeten meebrengen, afspraken na het zwemmen.
+        </p>
+
+        <textarea
+          value={infoText}
+          onChange={(e) => {
+            setInfoText(e.target.value);
+            setInfoSaved(false);
+          }}
+          rows={3}
+          maxLength={5000}
+          placeholder="Optioneel: korte praktische tekst."
+          className="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+        />
+        <button
+          onClick={handleSaveInfoText}
+          disabled={busy || infoSaved}
+          className="mt-1 rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium disabled:opacity-50 dark:border-zinc-700"
+        >
+          {infoSaved ? "Opgeslagen" : "Tekst opslaan"}
+        </button>
+
+        {event.info_file_url ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <a
+              href={event.info_file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-700 underline dark:text-emerald-400"
+            >
+              Huidig bestand bekijken
+            </a>
+            <button
+              onClick={() => patchEvent({ info_file_url: null })}
+              className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+            >
+              Verwijderen
+            </button>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-zinc-500">Nog geen bestand geüpload.</p>
+        )}
+        <input
+          type="file"
+          accept="application/pdf,image/png,image/jpeg,image/webp"
+          onChange={(e) => handleUpload(e, "info")}
+          disabled={uploading}
+          className="mt-2 block w-full text-xs text-zinc-600 file:mr-3 file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium dark:text-zinc-400 dark:file:border-zinc-700 dark:file:bg-zinc-800 dark:file:text-zinc-200"
+        />
       </div>
 
       {/* Checkboxes */}

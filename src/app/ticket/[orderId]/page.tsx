@@ -65,7 +65,10 @@ export default async function TicketPage({
         </p>
 
         {order.status === "paid" ? (
-          <PaidConfirmation order={order} />
+          <>
+            <PaidConfirmation order={order} />
+            <PracticalInfo event={event} />
+          </>
         ) : order.status === "open" ? (
           <>
             {order.payment_method === "bank_transfer" && (
@@ -132,6 +135,56 @@ async function PaidConfirmation({ order }: { order: OrderRow }) {
           We stuurden deze bevestiging ook naar {order.buyer_email}.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * What to re-read the evening before: when the doors open, what to bring.
+ * Sits right under the QR code, which is the page people come back to.
+ */
+function PracticalInfo({ event }: { event: EventRow }) {
+  if (!event.info_text && !event.info_file_url) return null;
+
+  const isImage = !!event.info_file_url && /\.(png|jpe?g|webp)$/i.test(event.info_file_url);
+
+  return (
+    <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 text-left dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        Praktische info
+      </p>
+
+      {event.info_text && (
+        <p className="mt-2 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
+          {event.info_text}
+        </p>
+      )}
+
+      {event.info_file_url &&
+        (isImage ? (
+          <a
+            href={event.info_file_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 block"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={event.info_file_url}
+              alt="Praktische info"
+              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700"
+            />
+          </a>
+        ) : (
+          <a
+            href={event.info_file_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            Praktische info lezen
+          </a>
+        ))}
     </div>
   );
 }

@@ -35,6 +35,9 @@ export type EventRow = {
   online_payment_enabled: boolean;
   rules_text: string | null;
   rules_file_url: string | null;
+  /** Practical info for people who already booked; shown on the ticket. */
+  info_text: string | null;
+  info_file_url: string | null;
   is_published: boolean;
   created_at: string;
 };

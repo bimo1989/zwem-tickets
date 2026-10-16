@@ -28,6 +28,8 @@ create table if not exists events (
   online_payment_enabled boolean not null default false, -- offer Bancontact/Mollie; off = bank transfer only
   rules_text text,                       -- optional rules shown before ordering
   rules_file_url text,                   -- optional uploaded PDF/photo of the rules
+  info_text text,                        -- practical info shown on the ticket after booking
+  info_file_url text,                    -- optional uploaded PDF/photo with that info
   is_published boolean not null default true,
   created_at timestamptz not null default now()
 );

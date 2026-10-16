@@ -104,6 +104,7 @@ export async function sendTicketEmail(
              </p>`
           : ""
       }
+      ${practicalInfoHtml(event)}
       <p style="font-size: 12px; color: #999;">Ticketcode: ${order.ticket_code}</p>
     </div>
   `;
@@ -188,6 +189,7 @@ export async function sendReminderEmail(
              </p>`
           : ""
       }
+      ${practicalInfoHtml(event)}
       <p style="font-size: 12px; color: #999;">Ticketcode: ${order.ticket_code}</p>
     </div>
   `;
@@ -247,6 +249,30 @@ export async function sendTestEmail(to: string, client?: SupabaseClient) {
   if (error) {
     throw new Error(error.message ?? "Resend weigerde de mail.");
   }
+}
+
+/**
+ * The practical info an attendee wants to re-read: rendered inline when it's
+ * text, linked when it's an uploaded document.
+ */
+function practicalInfoHtml(event: EventRow): string {
+  if (!event.info_text && !event.info_file_url) return "";
+
+  return `
+    <div style="border-top: 1px solid #eee; margin-top: 24px; padding-top: 16px;">
+      <p style="font-weight: bold; margin-bottom: 8px;">Praktische info</p>
+      ${
+        event.info_text
+          ? `<p style="white-space: pre-line;">${escapeHtml(event.info_text)}</p>`
+          : ""
+      }
+      ${
+        event.info_file_url
+          ? `<p><a href="${event.info_file_url}" style="color:#059669;">Praktische info lezen</a></p>`
+          : ""
+      }
+    </div>
+  `;
 }
 
 function escapeHtml(input: string): string {

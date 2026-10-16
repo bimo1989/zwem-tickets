@@ -29,6 +29,9 @@ export async function POST(
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
+  // Which of the two documents this upload is: the rules shown before
+  // ordering, or the practical info shown on the ticket afterwards.
+  const kind = form?.get("kind") === "info" ? "info" : "rules";
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Geen bestand meegestuurd." }, { status: 400 });
@@ -49,7 +52,7 @@ export async function POST(
   }
 
   const supabase = getSupabaseAdmin();
-  const path = `${id}/reglement-${Date.now()}.${extension}`;
+  const path = `${id}/${kind}-${Date.now()}.${extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
@@ -74,7 +77,9 @@ export async function POST(
 
   const { data: event, error } = await supabase
     .from("events")
-    .update({ rules_file_url: publicUrl })
+    .update(
+      kind === "info" ? { info_file_url: publicUrl } : { rules_file_url: publicUrl }
+    )
     .eq("id", id)
     .select()
     .single();
